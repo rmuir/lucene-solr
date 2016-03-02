@@ -16,6 +16,9 @@ In this release, there is an example Solr server including a bundled
 servlet container in the directory named "example".
 See the Quick Start guide at http://lucene.apache.org/solr/quickstart.html
 
+==================  7.0.0 ==================
+(No Changes)
+
 ==================  6.0.0 ==================
 
 Consult the LUCENE_CHANGES.txt file for additional, low level, changes in this release
@@ -228,6 +231,11 @@ Bug Fixes
 
 * SOLR-8375: ReplicaAssigner rejects valid nodes (Kelvin Tan, noble)
 
+* SOLR-8738: Fixed false success response when invalid deleteByQuery requests intially hit non-leader
+  cloud nodes (hossman)
+
+* SOLR-8771: Multi-threaded core shutdown creates executor per core. (Mike Drob via Mark Miller)
+
 Optimizations
 ----------------------
 * SOLR-7876: Speed up queries and operations that use many terms when timeAllowed has not been
@@ -344,6 +352,8 @@ Other Changes
 
 * SOLR-8758: Add a new SolrCloudTestCase class, using MiniSolrCloudCluster (Alan
   Woodward)
+  
+* SOLR-8764: Remove all deprecated methods and classes from master prior to the 6.0 release. (Steve Rowe)
 
 ==================  5.5.1 ==================
 

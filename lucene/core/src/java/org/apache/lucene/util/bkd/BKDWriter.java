@@ -102,6 +102,7 @@ public class BKDWriter implements Closeable {
 
   final TrackingDirectoryWrapper tempDir;
   final String tempFileNamePrefix;
+  final double maxMBSortInHeap;
 
   final byte[] scratchDiff;
   final byte[] scratchPackedValue;
@@ -169,6 +170,8 @@ public class BKDWriter implements Closeable {
 
     // We write first maxPointsSortInHeap in heap, then cutover to offline for additional points:
     heapPointWriter = new HeapPointWriter(16, maxPointsSortInHeap, packedBytesLength);
+
+    this.maxMBSortInHeap = maxMBSortInHeap;
   }
 
   public static void verifyParams(int numDims, int maxPointsInLeafNode, double maxMBSortInHeap) {
@@ -550,7 +553,7 @@ public class BKDWriter implements Closeable {
     //int[] swapCount = new int[1];
     //int[] cmpCount = new int[1];
 
-    //System.out.println("SORT length=" + length);
+    // System.out.println("SORT length=" + length);
 
     // All buffered points are still in heap; just do in-place sort:
     new IntroSorter() {
@@ -574,7 +577,7 @@ public class BKDWriter implements Closeable {
         int block = j / writer.valuesPerBlock;
         int index = j % writer.valuesPerBlock;
         assert index >= 0: "index=" + index + " j=" + j;
-        int cmp = NumericUtils.compare(bytesPerDim, pivotPackedValue, 0, writer.blocks.get(block), index*numDims+dim);
+        int cmp = StringHelper.compare(bytesPerDim, pivotPackedValue, 0, writer.blocks.get(block), bytesPerDim*(index*numDims+dim));
         if (cmp != 0) {
           return cmp;
         }
@@ -618,18 +621,16 @@ public class BKDWriter implements Closeable {
         int dimI = i % writer.valuesPerBlock;
         int blockJ = j / writer.valuesPerBlock;
         int dimJ = j % writer.valuesPerBlock;
-        int cmp = NumericUtils.compare(bytesPerDim, writer.blocks.get(blockI), dimI*numDims+dim, writer.blocks.get(blockJ), dimJ*numDims+dim);
+        int cmp = StringHelper.compare(bytesPerDim, writer.blocks.get(blockI), bytesPerDim*(dimI*numDims+dim), writer.blocks.get(blockJ), bytesPerDim*(dimJ*numDims+dim));
         if (cmp != 0) {
           return cmp;
         }
 
-        // Tie-break
-        cmp = Integer.compare(writer.docIDs[i], writer.docIDs[j]);
-        if (cmp != 0) {
-          return cmp;
-        }
+        // Tie-break by docID:
 
-        return Long.compare(writer.ords[i], writer.ords[j]);
+        // No need to tie break on ord, for the case where the same doc has the same value in a given dimension indexed more than once: it
+        // can't matter at search time since we don't write ords into the index:
+        return Integer.compare(writer.docIDs[i], writer.docIDs[j]);
       }
     }.sort(start, start+length);
     //System.out.println("LEN=" + length + " SWAP=" + swapCount[0] + " CMP=" + cmpCount[0]);
@@ -665,42 +666,37 @@ public class BKDWriter implements Closeable {
       // Offline sort:
       assert tempInput != null;
 
-      final ByteArrayDataInput reader = new ByteArrayDataInput();
       Comparator<BytesRef> cmp = new Comparator<BytesRef>() {
-        private final ByteArrayDataInput readerB = new ByteArrayDataInput();
+ 
+        final ByteArrayDataInput reader = new ByteArrayDataInput();
 
         @Override
         public int compare(BytesRef a, BytesRef b) {
-          reader.reset(a.bytes, a.offset, a.length);
-          reader.readBytes(scratch1, 0, scratch1.length);
-          final int docIDA = reader.readVInt();
-          final long ordA = reader.readVLong();
 
-          reader.reset(b.bytes, b.offset, b.length);
-          reader.readBytes(scratch2, 0, scratch2.length);
-          final int docIDB = reader.readVInt();
-          final long ordB = reader.readVLong();
-
-          int cmp = NumericUtils.compare(bytesPerDim, scratch1, dim, scratch2, dim);
+          // First compare the bytes on the dimension we are sorting on:
+          int cmp = StringHelper.compare(bytesPerDim, a.bytes, a.offset + bytesPerDim*dim, b.bytes, b.offset + bytesPerDim*dim);
 
           if (cmp != 0) {
             return cmp;
           }
 
-          // Tie-break
-          cmp = Integer.compare(docIDA, docIDB);
-          if (cmp != 0) {
-            return cmp;
-          }
+          // Tie-break by docID:
+          reader.reset(a.bytes, a.offset + packedBytesLength + Long.BYTES, a.length);
+          final int docIDA = reader.readInt();
 
-          return Long.compare(ordA, ordB);
+          reader.reset(b.bytes, b.offset + packedBytesLength + Long.BYTES, b.length);
+          final int docIDB = reader.readInt();
+
+          // No need to tie break on ord, for the case where the same doc has the same value in a given dimension indexed more than once: it
+          // can't matter at search time since we don't write ords into the index:
+          return Integer.compare(docIDA, docIDB);
         }
       };
 
       // TODO: this is sort of sneaky way to get the final OfflinePointWriter from OfflineSorter:
       IndexOutput[] lastWriter = new IndexOutput[1];
 
-      OfflineSorter sorter = new OfflineSorter(tempDir, tempFileNamePrefix, cmp) {
+      OfflineSorter sorter = new OfflineSorter(tempDir, tempFileNamePrefix, cmp, OfflineSorter.BufferSize.megabytes(Math.max(1, (long) maxMBSortInHeap)), OfflineSorter.MAX_TEMPFILES) {
 
           /** We write/read fixed-byte-width file that {@link OfflinePointReader} can read. */
           @Override
@@ -752,7 +748,7 @@ public class BKDWriter implements Closeable {
 
   /** Writes the BKD tree to the provided {@link IndexOutput} and returns the file offset where index was written. */
   public long finish(IndexOutput out) throws IOException {
-    //System.out.println("\nBKDTreeWriter.finish pointCount=" + pointCount + " out=" + out + " heapWriter=" + heapWriter);
+    // System.out.println("\nBKDTreeWriter.finish pointCount=" + pointCount + " out=" + out + " heapWriter=" + heapPointWriter);
 
     // TODO: specialize the 1D case?  it's much faster at indexing time (no partitioning on recruse...)
 
@@ -967,10 +963,11 @@ public class BKDWriter implements Closeable {
   /** Called only in assert */
   private boolean valueInBounds(byte[] packedValue, byte[] minPackedValue, byte[] maxPackedValue) {
     for(int dim=0;dim<numDims;dim++) {
-      if (NumericUtils.compare(bytesPerDim, packedValue, dim, minPackedValue, dim) < 0) {
+      int offset = bytesPerDim*dim;
+      if (StringHelper.compare(bytesPerDim, packedValue, offset, minPackedValue, offset) < 0) {
         return false;
       }
-      if (NumericUtils.compare(bytesPerDim, packedValue, dim, maxPackedValue, dim) > 0) {
+      if (StringHelper.compare(bytesPerDim, packedValue, offset, maxPackedValue, offset) > 0) {
         return false;
       }
     }
@@ -984,7 +981,7 @@ public class BKDWriter implements Closeable {
     int splitDim = -1;
     for(int dim=0;dim<numDims;dim++) {
       NumericUtils.subtract(bytesPerDim, dim, maxPackedValue, minPackedValue, scratchDiff);
-      if (splitDim == -1 || NumericUtils.compare(bytesPerDim, scratchDiff, 0, scratch1, 0) > 0) {
+      if (splitDim == -1 || StringHelper.compare(bytesPerDim, scratchDiff, 0, scratch1, 0) > 0) {
         System.arraycopy(scratchDiff, 0, scratch1, 0, bytesPerDim);
         splitDim = dim;
       }
@@ -1194,7 +1191,7 @@ public class BKDWriter implements Closeable {
 
   // only called from assert
   private boolean valueInOrder(long ord, byte[] lastPackedValue, byte[] packedValue) {
-    if (ord > 0 && NumericUtils.compare(bytesPerDim, lastPackedValue, 0, packedValue, 0) > 0) {
+    if (ord > 0 && StringHelper.compare(bytesPerDim, lastPackedValue, 0, packedValue, 0) > 0) {
       throw new AssertionError("values out of order: last value=" + new BytesRef(lastPackedValue) + " current value=" + new BytesRef(packedValue) + " ord=" + ord);
     }
     System.arraycopy(packedValue, 0, lastPackedValue, 0, bytesPerDim);

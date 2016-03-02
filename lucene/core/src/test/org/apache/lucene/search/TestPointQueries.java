@@ -53,11 +53,13 @@ import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.MultiDocValues;
+import org.apache.lucene.index.MultiReader;
 import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.index.PointValues;
 import org.apache.lucene.index.RandomIndexWriter;
 import org.apache.lucene.index.SegmentReadState;
 import org.apache.lucene.index.SegmentWriteState;
+import org.apache.lucene.index.SlowCompositeReaderWrapper;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.BytesRef;
@@ -359,7 +361,7 @@ public class TestPointQueries extends LuceneTestCase {
     final IndexReader r = w.getReader();
     w.close();
 
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r, false);
 
     int numThreads = TestUtil.nextInt(random(), 2, 5);
 
@@ -614,7 +616,7 @@ public class TestPointQueries extends LuceneTestCase {
     final IndexReader r = w.getReader();
     w.close();
 
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r, false);
 
     int numThreads = TestUtil.nextInt(random(), 2, 5);
 
@@ -656,7 +658,7 @@ public class TestPointQueries extends LuceneTestCase {
                 upper[dim] = new byte[bytesPerDim];
                 random().nextBytes(upper[dim]);
 
-                if (NumericUtils.compare(bytesPerDim, lower[dim], 0, upper[dim], 0) > 0) {
+                if (StringHelper.compare(bytesPerDim, lower[dim], 0, upper[dim], 0) > 0) {
                   byte[] x = lower[dim];
                   lower[dim] = upper[dim];
                   upper[dim] = x;
@@ -751,12 +753,12 @@ public class TestPointQueries extends LuceneTestCase {
     int numDims = lower.length;
     for(int dim=0;dim<numDims;dim++) {
 
-      if (NumericUtils.compare(bytesPerDim, value[dim], 0, lower[dim], 0) < 0) {
+      if (StringHelper.compare(bytesPerDim, value[dim], 0, lower[dim], 0) < 0) {
         // Value is below the lower bound, on this dim
         return false;
       }
 
-      if (NumericUtils.compare(bytesPerDim, value[dim], 0, upper[dim], 0) > 0) {
+      if (StringHelper.compare(bytesPerDim, value[dim], 0, upper[dim], 0) > 0) {
         // Value is above the upper bound, on this dim
         return false;
       }
@@ -788,7 +790,7 @@ public class TestPointQueries extends LuceneTestCase {
 
     IndexReader r = w.getReader();
 
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r, false);
 
     assertEquals(1, s.count(LongPoint.newRangeQuery("value", Long.MIN_VALUE, 0L)));
     assertEquals(1, s.count(LongPoint.newRangeQuery("value", 0L, Long.MAX_VALUE)));
@@ -826,7 +828,7 @@ public class TestPointQueries extends LuceneTestCase {
 
     IndexReader r = w.getReader();
 
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r, false);
 
     assertEquals(1, s.count(BinaryPoint.newRangeQuery("value", toUTF8("aaa"), toUTF8("bbb"))));
     assertEquals(1, s.count(BinaryPoint.newRangeQuery("value", toUTF8("c", 3), toUTF8("e", 3))));
@@ -855,7 +857,7 @@ public class TestPointQueries extends LuceneTestCase {
 
     IndexReader r = w.getReader();
 
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r, false);
 
     assertEquals(2, s.count(LongPoint.newRangeQuery("value", Long.MIN_VALUE, Long.MAX_VALUE)));
     assertEquals(1, s.count(LongPoint.newRangeQuery("value", Long.MIN_VALUE, Long.MAX_VALUE-1)));
@@ -879,7 +881,6 @@ public class TestPointQueries extends LuceneTestCase {
 
     IndexReader r = w.getReader();
 
-    // We can't wrap with "exotic" readers because the query must see the RangeTreeDVFormat:
     IndexSearcher s = newSearcher(r, false);
 
     assertEquals(2, s.count(LongPoint.newRangeQuery("value", Long.MIN_VALUE, Long.MAX_VALUE)));
@@ -904,7 +905,7 @@ public class TestPointQueries extends LuceneTestCase {
 
     IndexReader r = w.getReader();
 
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r,false);
     assertEquals(0, s.count(BinaryPoint.newRangeQuery("value", toUTF8("m"), toUTF8("m"))));
 
     IOUtils.close(r, w, dir);
@@ -939,7 +940,7 @@ public class TestPointQueries extends LuceneTestCase {
 
     IndexReader r = w.getReader();
 
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r, false);
     assertEquals(0, s.count(LongPoint.newRangeQuery("value", 17L, 13L)));
 
     IOUtils.close(r, w, dir);
@@ -1079,7 +1080,7 @@ public class TestPointQueries extends LuceneTestCase {
     w.addDocument(doc);
 
     IndexReader r = DirectoryReader.open(w);
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r, false);
     assertEquals(1, s.count(IntPoint.newExactQuery("int", 42)));
     assertEquals(0, s.count(IntPoint.newExactQuery("int", 41)));
 
@@ -1194,7 +1195,7 @@ public class TestPointQueries extends LuceneTestCase {
     final IndexReader r = w.getReader();
     w.close();
 
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r, false);
 
     int numThreads = TestUtil.nextInt(random(), 2, 5);
 
@@ -1333,7 +1334,7 @@ public class TestPointQueries extends LuceneTestCase {
     doc.add(new IntPoint("int", 17, 42));
     w.addDocument(doc);
     IndexReader r = DirectoryReader.open(w);
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r, false);
 
     assertEquals(0, s.count(newMultiDimIntSetQuery("int", 2, 17, 41)));
     assertEquals(1, s.count(newMultiDimIntSetQuery("int", 2, 17, 42)));
@@ -1356,7 +1357,7 @@ public class TestPointQueries extends LuceneTestCase {
     doc.add(new IntPoint("int", 34, 79));
     w.addDocument(doc);
     IndexReader r = DirectoryReader.open(w);
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r, false);
 
     assertEquals(0, s.count(newMultiDimIntSetQuery("int", 2, 17, 41)));
     assertEquals(1, s.count(newMultiDimIntSetQuery("int", 2, 17, 42)));
@@ -1389,7 +1390,7 @@ public class TestPointQueries extends LuceneTestCase {
       w.addDocument(doc);
     }
     IndexReader r = DirectoryReader.open(w);
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r, false);
 
     assertEquals(zeroCount, s.count(newMultiDimIntSetQuery("int", 2, 0, 0)));
     assertEquals(10000-zeroCount, s.count(newMultiDimIntSetQuery("int", 2, 1, 1)));
@@ -1439,7 +1440,7 @@ public class TestPointQueries extends LuceneTestCase {
     w.addDocument(doc);
 
     IndexReader r = DirectoryReader.open(w);
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r, false);
     assertEquals(0, s.count(IntPoint.newSetQuery("int", 16)));
     assertEquals(1, s.count(IntPoint.newSetQuery("int", 17)));
     assertEquals(3, s.count(IntPoint.newSetQuery("int", 17, 97, 42)));
@@ -1500,7 +1501,7 @@ public class TestPointQueries extends LuceneTestCase {
     w.addDocument(doc);
 
     IndexReader r = DirectoryReader.open(w);
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r, false);
     assertEquals(0, s.count(IntPoint.newSetQuery("int", 16)));
     assertEquals(1, s.count(IntPoint.newSetQuery("int", 17)));
     assertEquals(1, s.count(IntPoint.newSetQuery("int", 17, 97, 42)));
@@ -1551,7 +1552,7 @@ public class TestPointQueries extends LuceneTestCase {
     w.addDocument(doc);
 
     IndexReader r = DirectoryReader.open(w);
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r, false);
     assertEquals(0, s.count(IntPoint.newSetQuery("int")));
     assertEquals(0, s.count(LongPoint.newSetQuery("long")));
     assertEquals(0, s.count(FloatPoint.newSetQuery("float")));
@@ -1585,7 +1586,7 @@ public class TestPointQueries extends LuceneTestCase {
     }
 
     IndexReader r = DirectoryReader.open(w);
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r, false);
     assertEquals(zeroCount, s.count(IntPoint.newSetQuery("int", 0)));
     assertEquals(zeroCount, s.count(IntPoint.newSetQuery("int", 0, -7)));
     assertEquals(zeroCount, s.count(IntPoint.newSetQuery("int", 7, 0)));
@@ -1643,7 +1644,7 @@ public class TestPointQueries extends LuceneTestCase {
     }
 
     IndexReader r = DirectoryReader.open(w);
-    IndexSearcher s = newSearcher(r);
+    IndexSearcher s = newSearcher(r, false);
     assertEquals(zeroCount, s.count(IntPoint.newSetQuery("int", 0)));
     assertEquals(zeroCount, s.count(IntPoint.newSetQuery("int", 0, -7)));
     assertEquals(zeroCount, s.count(IntPoint.newSetQuery("int", 7, 0)));
