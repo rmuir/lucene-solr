@@ -206,6 +206,128 @@ public class TestPointQueries extends LuceneTestCase {
     r.close();
     dir.close();
   }
+  
+  public void testCrazyDoubles() throws Exception {
+    Directory dir = newDirectory();
+    IndexWriter w = new IndexWriter(dir, new IndexWriterConfig(new MockAnalyzer(random())));
+
+    Document doc = new Document();
+    doc.add(new DoublePoint("point", Double.NEGATIVE_INFINITY));
+    w.addDocument(doc);
+    
+    doc = new Document();
+    doc.add(new DoublePoint("point", -0.0D));
+    w.addDocument(doc);
+    
+    doc = new Document();
+    doc.add(new DoublePoint("point", +0.0D));
+    w.addDocument(doc);
+
+    doc = new Document();
+    doc.add(new DoublePoint("point", Double.MIN_VALUE));
+    w.addDocument(doc);
+    
+    doc = new Document();
+    doc.add(new DoublePoint("point", Double.MAX_VALUE));
+    w.addDocument(doc);
+    
+    doc = new Document();
+    doc.add(new DoublePoint("point", Double.POSITIVE_INFINITY));
+    w.addDocument(doc);
+
+    doc = new Document();
+    doc.add(new DoublePoint("point", Double.NaN));
+    w.addDocument(doc);
+
+    DirectoryReader r = DirectoryReader.open(w);
+    IndexSearcher s = new IndexSearcher(r);
+    
+    // exact queries
+    assertEquals(1, s.count(DoublePoint.newExactQuery("point", Double.NEGATIVE_INFINITY)));
+    assertEquals(1, s.count(DoublePoint.newExactQuery("point", -0.0D)));
+    assertEquals(1, s.count(DoublePoint.newExactQuery("point", +0.0D)));
+    assertEquals(1, s.count(DoublePoint.newExactQuery("point", Double.MIN_VALUE)));
+    assertEquals(1, s.count(DoublePoint.newExactQuery("point", Double.MAX_VALUE)));
+    assertEquals(1, s.count(DoublePoint.newExactQuery("point", Double.POSITIVE_INFINITY)));
+    assertEquals(1, s.count(DoublePoint.newExactQuery("point", Double.NaN)));
+    
+    // set query
+    double set[] = new double[] { Double.MAX_VALUE, Double.NaN, +0.0D, Double.NEGATIVE_INFINITY, Double.MIN_VALUE, -0.0D, Double.POSITIVE_INFINITY };
+    assertEquals(7, s.count(DoublePoint.newSetQuery("point", set)));
+
+    // ranges
+    assertEquals(2, s.count(DoublePoint.newRangeQuery("point", Double.NEGATIVE_INFINITY, -0.0D)));
+    assertEquals(2, s.count(DoublePoint.newRangeQuery("point", -0.0D, 0.0D)));
+    assertEquals(2, s.count(DoublePoint.newRangeQuery("point", 0.0D, Double.MIN_VALUE)));
+    assertEquals(2, s.count(DoublePoint.newRangeQuery("point", Double.MIN_VALUE, Double.MAX_VALUE)));
+    assertEquals(2, s.count(DoublePoint.newRangeQuery("point", Double.MAX_VALUE, Double.POSITIVE_INFINITY)));
+    assertEquals(2, s.count(DoublePoint.newRangeQuery("point", Double.POSITIVE_INFINITY, Double.NaN)));
+
+    w.close();
+    r.close();
+    dir.close();
+  }
+  
+  public void testCrazyFloats() throws Exception {
+    Directory dir = newDirectory();
+    IndexWriter w = new IndexWriter(dir, new IndexWriterConfig(new MockAnalyzer(random())));
+
+    Document doc = new Document();
+    doc.add(new FloatPoint("point", Float.NEGATIVE_INFINITY));
+    w.addDocument(doc);
+    
+    doc = new Document();
+    doc.add(new FloatPoint("point", -0.0F));
+    w.addDocument(doc);
+    
+    doc = new Document();
+    doc.add(new FloatPoint("point", +0.0F));
+    w.addDocument(doc);
+
+    doc = new Document();
+    doc.add(new FloatPoint("point", Float.MIN_VALUE));
+    w.addDocument(doc);
+    
+    doc = new Document();
+    doc.add(new FloatPoint("point", Float.MAX_VALUE));
+    w.addDocument(doc);
+    
+    doc = new Document();
+    doc.add(new FloatPoint("point", Float.POSITIVE_INFINITY));
+    w.addDocument(doc);
+
+    doc = new Document();
+    doc.add(new FloatPoint("point", Float.NaN));
+    w.addDocument(doc);
+
+    DirectoryReader r = DirectoryReader.open(w);
+    IndexSearcher s = new IndexSearcher(r);
+    
+    // exact queries
+    assertEquals(1, s.count(FloatPoint.newExactQuery("point", Float.NEGATIVE_INFINITY)));
+    assertEquals(1, s.count(FloatPoint.newExactQuery("point", -0.0F)));
+    assertEquals(1, s.count(FloatPoint.newExactQuery("point", +0.0F)));
+    assertEquals(1, s.count(FloatPoint.newExactQuery("point", Float.MIN_VALUE)));
+    assertEquals(1, s.count(FloatPoint.newExactQuery("point", Float.MAX_VALUE)));
+    assertEquals(1, s.count(FloatPoint.newExactQuery("point", Float.POSITIVE_INFINITY)));
+    assertEquals(1, s.count(FloatPoint.newExactQuery("point", Float.NaN)));
+    
+    // set query
+    float set[] = new float[] { Float.MAX_VALUE, Float.NaN, +0.0F, Float.NEGATIVE_INFINITY, Float.MIN_VALUE, -0.0F, Float.POSITIVE_INFINITY };
+    assertEquals(7, s.count(FloatPoint.newSetQuery("point", set)));
+
+    // ranges
+    assertEquals(2, s.count(FloatPoint.newRangeQuery("point", Float.NEGATIVE_INFINITY, -0.0F)));
+    assertEquals(2, s.count(FloatPoint.newRangeQuery("point", -0.0F, 0.0F)));
+    assertEquals(2, s.count(FloatPoint.newRangeQuery("point", 0.0F, Float.MIN_VALUE)));
+    assertEquals(2, s.count(FloatPoint.newRangeQuery("point", Float.MIN_VALUE, Float.MAX_VALUE)));
+    assertEquals(2, s.count(FloatPoint.newRangeQuery("point", Float.MAX_VALUE, Float.POSITIVE_INFINITY)));
+    assertEquals(2, s.count(FloatPoint.newRangeQuery("point", Float.POSITIVE_INFINITY, Float.NaN)));
+
+    w.close();
+    r.close();
+    dir.close();
+  }
 
   public void testAllEqual() throws Exception {
     int numValues = atLeast(10000);

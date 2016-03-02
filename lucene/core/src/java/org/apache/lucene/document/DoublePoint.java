@@ -170,6 +170,8 @@ public final class DoublePoint extends Field {
    * <p>
    * You can have half-open ranges (which are in fact &lt;/&le; or &gt;/&ge; queries)
    * by setting {@code lowerValue = Double.NEGATIVE_INFINITY} or {@code upperValue = Double.POSITIVE_INFINITY}. 
+   * <p>
+   * Range comparisons are consistent with {@link Double#compareTo(Double)}.
    *
    * @param field field name. must not be {@code null}.
    * @param lowerValue lower portion of the range (inclusive).
@@ -186,6 +188,8 @@ public final class DoublePoint extends Field {
    * <p>
    * You can have half-open ranges (which are in fact &lt;/&le; or &gt;/&ge; queries)
    * by setting {@code lowerValue[i] = Double.NEGATIVE_INFINITY} or {@code upperValue[i] = Double.POSITIVE_INFINITY}. 
+   * <p>
+   * Range comparisons are consistent with {@link Double#compareTo(Double)}.
    *
    * @param field field name. must not be {@code null}.
    * @param lowerValue lower portion of the range (inclusive). must not be {@code null}.
