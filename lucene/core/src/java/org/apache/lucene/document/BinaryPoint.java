@@ -171,10 +171,7 @@ public final class BinaryPoint extends Field {
    * @return a query matching documents within this range.
    */
   public static Query newRangeQuery(String field, byte[][] lowerValue, byte[][] upperValue) {
-    PointRangeQuery.checkArgs(field, lowerValue, upperValue);
-    boolean[] inclusive = new boolean[lowerValue.length];
-    Arrays.fill(inclusive, true);
-    return new PointRangeQuery(field, lowerValue, inclusive, upperValue, inclusive) {
+    return new PointRangeQuery(field, lowerValue, upperValue) {
       @Override
       protected String toString(int dimension, byte[] value) {
         assert value != null;

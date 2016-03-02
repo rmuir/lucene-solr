@@ -196,7 +196,7 @@ public class InetAddressPoint extends Field {
     lowerBytes[0] = encode(lowerValue);
     byte[][] upperBytes = new byte[1][];
     upperBytes[0] = encode(upperValue);
-    return new PointRangeQuery(field, lowerBytes, new boolean[] { true }, upperBytes, new boolean[] { true }) {
+    return new PointRangeQuery(field, lowerBytes, upperBytes) {
       @Override
       protected String toString(int dimension, byte[] value) {
         return decode(value).getHostAddress(); // for ranges, the range itself is already bracketed

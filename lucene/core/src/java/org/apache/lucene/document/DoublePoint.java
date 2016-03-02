@@ -196,9 +196,7 @@ public final class DoublePoint extends Field {
    */
   public static Query newRangeQuery(String field, double[] lowerValue, double[] upperValue) {
     PointRangeQuery.checkArgs(field, lowerValue, upperValue);
-    boolean[] inclusive = new boolean[lowerValue.length];
-    Arrays.fill(inclusive, true);
-    return new PointRangeQuery(field, encode(lowerValue), inclusive, encode(upperValue), inclusive) {
+    return new PointRangeQuery(field, encode(lowerValue), encode(upperValue)) {
       @Override
       protected String toString(int dimension, byte[] value) {
         return Double.toString(decodeDimension(value, 0));

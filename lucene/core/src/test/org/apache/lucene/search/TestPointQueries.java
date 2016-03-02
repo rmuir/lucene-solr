@@ -960,6 +960,8 @@ public class TestPointQueries extends LuceneTestCase {
     // no wrapping, else the exc might happen in executor thread:
     IndexSearcher s = new IndexSearcher(r);
     byte[][] point = new byte[2][];
+    point[0] = new byte[8];
+    point[1] = new byte[8];
     IllegalArgumentException expected = expectThrows(IllegalArgumentException.class, () -> {
       s.count(BinaryPoint.newRangeQuery("value", point, point));
     });

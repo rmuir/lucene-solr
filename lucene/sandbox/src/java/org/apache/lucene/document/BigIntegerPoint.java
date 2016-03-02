@@ -210,9 +210,7 @@ public class BigIntegerPoint extends Field {
    */
   public static Query newRangeQuery(String field, BigInteger[] lowerValue, BigInteger[] upperValue) {
     PointRangeQuery.checkArgs(field, lowerValue, upperValue);
-    boolean[] inclusive = new boolean[lowerValue.length];
-    Arrays.fill(inclusive, true);
-    return new PointRangeQuery(field, BigIntegerPoint.encode(lowerValue), inclusive, BigIntegerPoint.encode(upperValue), inclusive) {
+    return new PointRangeQuery(field, BigIntegerPoint.encode(lowerValue), BigIntegerPoint.encode(upperValue)) {
       @Override
       protected String toString(int dimension, byte[] value) {
         return BigIntegerPoint.decodeDimension(value, 0).toString();
