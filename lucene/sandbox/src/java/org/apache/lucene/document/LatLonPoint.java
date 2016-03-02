@@ -235,11 +235,13 @@ public class LatLonPoint extends Field {
       leftOpen[0] = lower[0];
       // leave longitude open
       leftOpen[1] = new byte[Integer.BYTES];
-      NumericUtils.intToBytes(Integer.MAX_VALUE, leftOpen[1], 0);
+      NumericUtils.intToBytes(Integer.MIN_VALUE, leftOpen[1], 0);
       Query left = newBoxInternal(field, leftOpen, upper);
       q.add(new BooleanClause(left, BooleanClause.Occur.SHOULD));
+
       byte[][] rightOpen = new byte[2][];
       rightOpen[0] = upper[0];
+      // leave longitude open
       rightOpen[1] = new byte[Integer.BYTES];
       NumericUtils.intToBytes(Integer.MAX_VALUE, rightOpen[1], 0);
       Query right = newBoxInternal(field, lower, rightOpen);
