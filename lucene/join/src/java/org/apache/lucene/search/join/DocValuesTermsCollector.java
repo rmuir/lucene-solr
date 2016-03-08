@@ -19,8 +19,6 @@ package org.apache.lucene.search.join;
 import java.io.IOException;
 import java.util.function.LongConsumer;
 
-import org.apache.lucene.document.FieldType;
-import org.apache.lucene.document.FieldType.LegacyNumericType;
 import org.apache.lucene.index.BinaryDocValues;
 import org.apache.lucene.index.DocValues;
 import org.apache.lucene.index.LeafReader;
@@ -31,7 +29,7 @@ import org.apache.lucene.index.SortedSetDocValues;
 import org.apache.lucene.search.SimpleCollector;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.BytesRefBuilder;
-import org.apache.lucene.util.LegacyNumericUtils;
+import org.apache.lucene.util.NumericUtils;
 
 abstract class DocValuesTermsCollector<DV> extends SimpleCollector {
   
@@ -59,7 +57,7 @@ abstract class DocValuesTermsCollector<DV> extends SimpleCollector {
     return (ctx) -> DocValues.getSortedSet(ctx, field);
   }
   
-  static Function<BinaryDocValues> numericAsBinaryDocValues(String field, LegacyNumericType numTyp) {
+  static Function<BinaryDocValues> numericAsBinaryDocValues(String field, Class<? extends Number> numTyp) {
     return (ctx) -> {
       final NumericDocValues numeric = DocValues.getNumeric(ctx, field);
       final BytesRefBuilder bytes = new BytesRefBuilder();
@@ -77,21 +75,26 @@ abstract class DocValuesTermsCollector<DV> extends SimpleCollector {
     };
   }
   
-  static LongConsumer coder(BytesRefBuilder bytes, LegacyNumericType type, String fieldName){
-    switch(type){
-      case INT: 
-        return (l) -> LegacyNumericUtils.intToPrefixCoded((int) l, 0, bytes);
-      case LONG: 
-        return (l) -> LegacyNumericUtils.longToPrefixCoded(l, 0, bytes);
-      default:
+  static LongConsumer coder(BytesRefBuilder bytes, Class<? extends Number> type, String fieldName) {
+    if (Integer.class.equals(type)) {
+      bytes.grow(Integer.BYTES);
+      bytes.setLength(Integer.BYTES);
+      BytesRef ref = bytes.get();
+      return (l) -> NumericUtils.intToSortableBytes((int) l, ref.bytes, ref.offset);
+    } else if (Long.class.equals(type)) {
+      bytes.grow(Long.BYTES);
+      bytes.setLength(Long.BYTES);
+      BytesRef ref = bytes.get();
+      return (l) -> NumericUtils.longToSortableBytes(l, ref.bytes, ref.offset);
+    } else {
         throw new IllegalArgumentException("Unsupported "+type+
-            ". Only "+ LegacyNumericType.INT+" and "+ FieldType.LegacyNumericType.LONG+" are supported."
+            ". Only "+ Integer.class+" and "+ Long.class+" are supported."
             + "Field "+fieldName );
     }
   }
   
   /** this adapter is quite weird. ords are per doc index, don't use ords across different docs*/
-  static Function<SortedSetDocValues> sortedNumericAsSortedSetDocValues(String field, FieldType.LegacyNumericType numTyp) {
+  static Function<SortedSetDocValues> sortedNumericAsSortedSetDocValues(String field, Class<? extends Number> numTyp) {
     return (ctx) -> {
       final SortedNumericDocValues numerics = DocValues.getSortedNumeric(ctx, field);
       final BytesRefBuilder bytes = new BytesRefBuilder();
