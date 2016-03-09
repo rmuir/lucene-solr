@@ -25,51 +25,41 @@ import org.apache.lucene.queryparser.flexible.standard.config.StandardQueryConfi
 
 /**
  * This listener is used to listen to {@link FieldConfig} requests in
- * {@link QueryConfigHandler} and add {@link ConfigurationKeys#LEGACY_NUMERIC_CONFIG}
- * based on the {@link ConfigurationKeys#LEGACY_NUMERIC_CONFIG_MAP} set in the
+ * {@link QueryConfigHandler} and add {@link ConfigurationKeys#POINTS_CONFIG}
+ * based on the {@link ConfigurationKeys#POINTS_CONFIG_MAP} set in the
  * {@link QueryConfigHandler}.
  * 
- * @see LegacyNumericConfig
+ * @see PointsConfig
  * @see QueryConfigHandler
- * @see ConfigurationKeys#LEGACY_NUMERIC_CONFIG
- * @see ConfigurationKeys#LEGACY_NUMERIC_CONFIG_MAP
- * @deprecated Index with Points instead and use {@link PointsConfigListener}
+ * @see ConfigurationKeys#POINTS_CONFIG
+ * @see ConfigurationKeys#POINTS_CONFIG_MAP
  */
-@Deprecated
-public class LegacyNumericFieldConfigListener implements FieldConfigListener {
+public class PointsConfigListener implements FieldConfigListener {
   
   final private QueryConfigHandler config;
   
   /**
-   * Constructs a {@link LegacyNumericFieldConfigListener} object using the given {@link QueryConfigHandler}.
+   * Constructs a {@link PointsConfigListener} object using the given {@link QueryConfigHandler}.
    * 
    * @param config the {@link QueryConfigHandler} it will listen too
    */
-  public LegacyNumericFieldConfigListener(QueryConfigHandler config) {
-    
+  public PointsConfigListener(QueryConfigHandler config) { 
     if (config == null) {
       throw new IllegalArgumentException("config cannot be null!");
     }
-    
     this.config = config;
-    
   }
   
   @Override
   public void buildFieldConfig(FieldConfig fieldConfig) {
-    Map<String,LegacyNumericConfig> numericConfigMap = config
-        .get(ConfigurationKeys.LEGACY_NUMERIC_CONFIG_MAP);
+    Map<String,PointsConfig> pointsConfigMap = config.get(ConfigurationKeys.POINTS_CONFIG_MAP);
     
-    if (numericConfigMap != null) {
-      LegacyNumericConfig numericConfig = numericConfigMap
-          .get(fieldConfig.getField());
+    if (pointsConfigMap != null) {
+      PointsConfig pointsConfig = pointsConfigMap.get(fieldConfig.getField());
       
-      if (numericConfig != null) {
-        fieldConfig.set(ConfigurationKeys.LEGACY_NUMERIC_CONFIG, numericConfig);
+      if (pointsConfig != null) {
+        fieldConfig.set(ConfigurationKeys.POINTS_CONFIG, pointsConfig);
       }
-      
     }
-    
   }
-  
 }

@@ -169,19 +169,39 @@ public class StandardQueryConfigHandler extends QueryConfigHandler {
     /**
      * Key used to set a field to its {@link LegacyNumericConfig}.
      * 
-     * @see StandardQueryParser#setNumericConfigMap(Map)
-     * @see StandardQueryParser#getNumericConfigMap()
+     * @see StandardQueryParser#setLegacyNumericConfigMap(Map)
+     * @see StandardQueryParser#getLegacyNumericConfigMap()
+     * @deprecated Index with Points instead and use {@link #POINTS_CONFIG}
      */
+    @Deprecated
     final public static ConfigurationKey<LegacyNumericConfig> LEGACY_NUMERIC_CONFIG = ConfigurationKey.newInstance();
     
     /**
      * Key used to set the {@link LegacyNumericConfig} in {@link FieldConfig} for numeric fields.
      * 
-     * @see StandardQueryParser#setNumericConfigMap(Map)
-     * @see StandardQueryParser#getNumericConfigMap()
+     * @see StandardQueryParser#setLegacyNumericConfigMap(Map)
+     * @see StandardQueryParser#getLegacyNumericConfigMap()
+     * @deprecated Index with Points instead and use {@link #POINTS_CONFIG_MAP}
      */
+    @Deprecated
     final public static ConfigurationKey<Map<String,LegacyNumericConfig>> LEGACY_NUMERIC_CONFIG_MAP = ConfigurationKey.newInstance();
     
+    /**
+     * Key used to set a field to its {@link PointsConfig}.
+     * 
+     * @see StandardQueryParser#setLegacyNumericConfigMap(Map)
+     * @see StandardQueryParser#getLegacyNumericConfigMap()
+     */
+    final public static ConfigurationKey<PointsConfig> POINTS_CONFIG = ConfigurationKey.newInstance();
+
+    /**
+     * Key used to set the {@link PointsConfig} in {@link FieldConfig} for point fields.
+     * 
+     * @see StandardQueryParser#setLegacyNumericConfigMap(Map)
+     * @see StandardQueryParser#getLegacyNumericConfigMap()
+     */
+    final public static ConfigurationKey<Map<String,PointsConfig>> POINTS_CONFIG_MAP = ConfigurationKey.newInstance();
+
   }
   
   /**
@@ -196,6 +216,7 @@ public class StandardQueryConfigHandler extends QueryConfigHandler {
     addFieldConfigListener(new FieldBoostMapFCListener(this));
     addFieldConfigListener(new FieldDateResolutionFCListener(this));
     addFieldConfigListener(new LegacyNumericFieldConfigListener(this));
+    addFieldConfigListener(new PointsConfigListener(this));
     
     // Default Values
     set(ConfigurationKeys.ALLOW_LEADING_WILDCARD, false); // default in 2.9

@@ -17,72 +17,36 @@
 package org.apache.lucene.queryparser.flexible.standard.config;
 
 import java.text.NumberFormat;
-import java.util.Objects;
 
-import org.apache.lucene.document.FieldType;
-import org.apache.lucene.document.FieldType.LegacyNumericType;
+import org.apache.lucene.index.PointValues;
 
 /**
  * This class holds the configuration used to parse numeric queries and create
- * {@link org.apache.lucene.search.LegacyNumericRangeQuery}s.
+ * {@link PointValues} queries.
  * 
- * @see org.apache.lucene.search.LegacyNumericRangeQuery
+ * @see PointValues
  * @see NumberFormat
- * @deprecated Index with Points instead and use {@link PointsConfig}
  */
-@Deprecated
-public class LegacyNumericConfig {
-  
-  private int precisionStep;
-  
+public class PointsConfig {
+    
   private NumberFormat format;
   
-  private FieldType.LegacyNumericType type;
+  private Class<? extends Number> type;
   
   /**
-   * Constructs a {@link LegacyNumericConfig} object.
+   * Constructs a {@link PointsConfig} object.
    * 
-   * @param precisionStep
-   *          the precision used to index the numeric values
    * @param format
    *          the {@link NumberFormat} used to parse a {@link String} to
    *          {@link Number}
    * @param type
    *          the numeric type used to index the numeric values
    * 
-   * @see LegacyNumericConfig#setPrecisionStep(int)
-   * @see LegacyNumericConfig#setNumberFormat(NumberFormat)
-   * @see #setType(org.apache.lucene.document.FieldType.LegacyNumericType)
+   * @see PointsConfig#setNumberFormat(NumberFormat)
    */
-  public LegacyNumericConfig(int precisionStep, NumberFormat format,
-      LegacyNumericType type) {
-    setPrecisionStep(precisionStep);
+  public PointsConfig(NumberFormat format, Class<? extends Number> type) {
     setNumberFormat(format);
-    setType(type);
-    
-  }
-  
-  /**
-   * Returns the precision used to index the numeric values
-   * 
-   * @return the precision used to index the numeric values
-   * 
-   * @see org.apache.lucene.search.LegacyNumericRangeQuery#getPrecisionStep()
-   */
-  public int getPrecisionStep() {
-    return precisionStep;
-  }
-  
-  /**
-   * Sets the precision used to index the numeric values
-   * 
-   * @param precisionStep
-   *          the precision used to index the numeric values
-   * 
-   * @see org.apache.lucene.search.LegacyNumericRangeQuery#getPrecisionStep()
-   */
-  public void setPrecisionStep(int precisionStep) {
-    this.precisionStep = precisionStep;
+    setType(type);    
   }
   
   /**
@@ -101,7 +65,7 @@ public class LegacyNumericConfig {
    * 
    * @return the numeric type used to index the numeric values
    */
-  public LegacyNumericType getType() {
+  public Class<? extends Number> getType() {
     return type;
   }
   
@@ -110,14 +74,17 @@ public class LegacyNumericConfig {
    * 
    * @param type the numeric type used to index the numeric values
    */
-  public void setType(LegacyNumericType type) {
-    
+  public void setType(Class<? extends Number> type) {
     if (type == null) {
       throw new IllegalArgumentException("type cannot be null!");
     }
-    
+    if (Integer.class.equals(type) == false &&
+        Long.class.equals(type) == false &&
+        Float.class.equals(type) == false &&
+        Double.class.equals(type) == false) {
+      throw new IllegalArgumentException("unsupported numeric type: " + type);
+    }
     this.type = type;
-    
   }
   
   /**
@@ -128,39 +95,30 @@ public class LegacyNumericConfig {
    *          the {@link NumberFormat} used to parse a {@link String} to
    *          {@link Number}, cannot be <code>null</code>
    */
-  public void setNumberFormat(NumberFormat format) {
-    
+  public void setNumberFormat(NumberFormat format) {    
     if (format == null) {
       throw new IllegalArgumentException("format cannot be null!");
-    }
-    
+    } 
     this.format = format;
-    
   }
-  
-  @Override
-  public boolean equals(Object obj) {
-    
-    if (obj == this) return true;
-    
-    if (obj instanceof LegacyNumericConfig) {
-      LegacyNumericConfig other = (LegacyNumericConfig) obj;
-      
-      if (this.precisionStep == other.precisionStep
-          && this.type == other.type
-          && (this.format == other.format || (this.format.equals(other.format)))) {
-        return true;
-      }
-      
-    }
-    
-    return false;
-    
-  }
-  
+
   @Override
   public int hashCode() {
-    return Objects.hash(precisionStep, type, format);
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + format.hashCode();
+    result = prime * result + type.hashCode();
+    return result;
   }
-  
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (obj == null) return false;
+    if (getClass() != obj.getClass()) return false;
+    PointsConfig other = (PointsConfig) obj;
+    if (!format.equals(other.format)) return false;
+    if (!type.equals(other.type)) return false;
+    return true;
+  }
 }

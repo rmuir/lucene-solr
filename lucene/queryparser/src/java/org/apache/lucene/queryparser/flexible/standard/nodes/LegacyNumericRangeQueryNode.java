@@ -29,7 +29,9 @@ import org.apache.lucene.queryparser.flexible.standard.config.LegacyNumericConfi
  * 
  * @see LegacyNumericQueryNode
  * @see AbstractRangeQueryNode
+ * @deprecated Index with Points instead and use {@link PointRangeQueryNode} instead.
  */
+@Deprecated
 public class LegacyNumericRangeQueryNode extends
     AbstractRangeQueryNode<LegacyNumericQueryNode> {
   

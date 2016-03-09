@@ -56,7 +56,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class TestNumericQueryParser extends LuceneTestCase {
+public class TestLegacyNumericQueryParser extends LuceneTestCase {
   
   private static enum NumberType {
     NEGATIVE, ZERO, POSITIVE;
@@ -195,7 +195,7 @@ public class TestNumericQueryParser extends LuceneTestCase {
     Document doc = new Document();
     HashMap<String,LegacyNumericConfig> numericConfigMap = new HashMap<>();
     HashMap<String,Field> numericFieldMap = new HashMap<>();
-    qp.setNumericConfigMap(numericConfigMap);
+    qp.setLegacyNumericConfigMap(numericConfigMap);
     
     for (LegacyNumericType type : LegacyNumericType.values()) {
       numericConfigMap.put(type.name(), new LegacyNumericConfig(PRECISION_STEP,

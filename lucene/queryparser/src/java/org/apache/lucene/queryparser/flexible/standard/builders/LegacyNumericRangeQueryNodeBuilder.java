@@ -32,13 +32,15 @@ import org.apache.lucene.search.LegacyNumericRangeQuery;
  *
  * @see org.apache.lucene.search.LegacyNumericRangeQuery
  * @see LegacyNumericRangeQueryNode
+ * @deprecated Index with points and use {@link PointRangeQueryNodeBuilder} instead.
  */
-public class NumericRangeQueryNodeBuilder implements StandardQueryBuilder {
+@Deprecated
+public class LegacyNumericRangeQueryNodeBuilder implements StandardQueryBuilder {
   
   /**
-   * Constructs a {@link NumericRangeQueryNodeBuilder} object.
+   * Constructs a {@link LegacyNumericRangeQueryNodeBuilder} object.
    */
-  public NumericRangeQueryNodeBuilder() {
+  public LegacyNumericRangeQueryNodeBuilder() {
   // empty constructor
   }
   
