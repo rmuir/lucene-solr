@@ -443,7 +443,7 @@ class FieldCacheImpl implements FieldCache {
   }
   
   @Override
-  public NumericDocValues getNumerics(LeafReader reader, String field, Parser parser, boolean setDocsWithField) throws IOException {
+  public NumericDocValues getLegacyNumerics(LeafReader reader, String field, Parser parser, boolean setDocsWithField) throws IOException {
     if (parser == null) {
       throw new NullPointerException();
     }

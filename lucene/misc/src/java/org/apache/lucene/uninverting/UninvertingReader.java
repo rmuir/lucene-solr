@@ -63,28 +63,28 @@ public class UninvertingReader extends FilterLeafReader {
      * Fields with this type act as if they were indexed with
      * {@link NumericDocValuesField}.
      */
-    INTEGER,
+    LEGACY_INTEGER,
     /** 
      * Single-valued Long, (e.g. indexed with {@link org.apache.lucene.document.LegacyLongField})
      * <p>
      * Fields with this type act as if they were indexed with
      * {@link NumericDocValuesField}.
      */
-    LONG,
+    LEGACY_LONG,
     /** 
      * Single-valued Float, (e.g. indexed with {@link org.apache.lucene.document.LegacyFloatField})
      * <p>
      * Fields with this type act as if they were indexed with
      * {@link NumericDocValuesField}.
      */
-    FLOAT,
+    LEGACY_FLOAT,
     /** 
      * Single-valued Double, (e.g. indexed with {@link org.apache.lucene.document.LegacyDoubleField})
      * <p>
      * Fields with this type act as if they were indexed with
      * {@link NumericDocValuesField}.
      */
-    DOUBLE,
+    LEGACY_DOUBLE,
     /** 
      * Single-valued Binary, (e.g. indexed with {@link StringField}) 
      * <p>
@@ -185,10 +185,10 @@ public class UninvertingReader extends FilterLeafReader {
         Type t = mapping.get(fi.name);
         if (t != null) {
           switch(t) {
-            case INTEGER:
-            case LONG:
-            case FLOAT:
-            case DOUBLE:
+            case LEGACY_INTEGER:
+            case LEGACY_LONG:
+            case LEGACY_FLOAT:
+            case LEGACY_DOUBLE:
               type = DocValuesType.NUMERIC;
               break;
             case BINARY:
@@ -226,10 +226,10 @@ public class UninvertingReader extends FilterLeafReader {
     Type v = getType(field);
     if (v != null) {
       switch (v) {
-        case INTEGER: return FieldCache.DEFAULT.getNumerics(in, field, FieldCache.NUMERIC_UTILS_INT_PARSER, true);
-        case FLOAT: return FieldCache.DEFAULT.getNumerics(in, field, FieldCache.NUMERIC_UTILS_FLOAT_PARSER, true);
-        case LONG: return FieldCache.DEFAULT.getNumerics(in, field, FieldCache.NUMERIC_UTILS_LONG_PARSER, true);
-        case DOUBLE: return FieldCache.DEFAULT.getNumerics(in, field, FieldCache.NUMERIC_UTILS_DOUBLE_PARSER, true);
+        case LEGACY_INTEGER: return FieldCache.DEFAULT.getLegacyNumerics(in, field, FieldCache.NUMERIC_UTILS_INT_PARSER, true);
+        case LEGACY_FLOAT: return FieldCache.DEFAULT.getLegacyNumerics(in, field, FieldCache.NUMERIC_UTILS_FLOAT_PARSER, true);
+        case LEGACY_LONG: return FieldCache.DEFAULT.getLegacyNumerics(in, field, FieldCache.NUMERIC_UTILS_LONG_PARSER, true);
+        case LEGACY_DOUBLE: return FieldCache.DEFAULT.getLegacyNumerics(in, field, FieldCache.NUMERIC_UTILS_DOUBLE_PARSER, true);
       }
     }
     return super.getNumericDocValues(field);

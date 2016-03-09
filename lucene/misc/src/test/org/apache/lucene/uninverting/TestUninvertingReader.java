@@ -363,8 +363,8 @@ public class TestUninvertingReader extends LuceneTestCase {
     iw.close();
 
     Map<String, Type> uninvertingMap = new HashMap<>();
-    uninvertingMap.put("int", Type.INTEGER);
-    uninvertingMap.put("dv", Type.INTEGER);
+    uninvertingMap.put("int", Type.LEGACY_INTEGER);
+    uninvertingMap.put("dv", Type.LEGACY_INTEGER);
 
     DirectoryReader ir = UninvertingReader.wrap(DirectoryReader.open(dir), 
                          uninvertingMap);

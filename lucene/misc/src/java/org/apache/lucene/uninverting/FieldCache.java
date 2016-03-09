@@ -197,8 +197,10 @@ interface FieldCache {
    * @return The values in the given field for each document.
    * @throws IOException
    *           If any error occurs.
+   * @deprecated Uninvert point values with {@link getNumerics} instead.
    */
-  public NumericDocValues getNumerics(LeafReader reader, String field, Parser parser, boolean setDocsWithField) throws IOException;
+  @Deprecated
+  public NumericDocValues getLegacyNumerics(LeafReader reader, String field, Parser parser, boolean setDocsWithField) throws IOException;
 
   /** Checks the internal cache for an appropriate entry, and if none
    * is found, reads the term values in <code>field</code>

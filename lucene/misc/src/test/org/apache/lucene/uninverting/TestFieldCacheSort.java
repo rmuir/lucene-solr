@@ -458,7 +458,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     doc.add(new LegacyIntField("value", 4, Field.Store.YES));
     writer.addDocument(doc);
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.INTEGER));
+                     Collections.singletonMap("value", Type.LEGACY_INTEGER));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -488,7 +488,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     doc.add(new LegacyIntField("value", 4, Field.Store.YES));
     writer.addDocument(doc);
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.INTEGER));
+                     Collections.singletonMap("value", Type.LEGACY_INTEGER));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -518,7 +518,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     doc.add(new LegacyIntField("value", 4, Field.Store.YES));
     writer.addDocument(doc);
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.INTEGER));
+                     Collections.singletonMap("value", Type.LEGACY_INTEGER));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -551,7 +551,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     doc.add(new LegacyIntField("value", 4, Field.Store.YES));
     writer.addDocument(doc);
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.INTEGER));
+                     Collections.singletonMap("value", Type.LEGACY_INTEGER));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -582,7 +582,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     doc.add(new LegacyLongField("value", 4, Field.Store.YES));
     writer.addDocument(doc);
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.LONG));
+                     Collections.singletonMap("value", Type.LEGACY_LONG));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -612,7 +612,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     doc.add(new LegacyLongField("value", 4, Field.Store.YES));
     writer.addDocument(doc);
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.LONG));
+                     Collections.singletonMap("value", Type.LEGACY_LONG));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -642,7 +642,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     doc.add(new LegacyLongField("value", 4, Field.Store.YES));
     writer.addDocument(doc);
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.LONG));
+                     Collections.singletonMap("value", Type.LEGACY_LONG));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -675,7 +675,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     doc.add(new LegacyLongField("value", 4, Field.Store.YES));
     writer.addDocument(doc);
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.LONG));
+                     Collections.singletonMap("value", Type.LEGACY_LONG));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -706,7 +706,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     doc.add(new LegacyFloatField("value", 4.2f, Field.Store.YES));
     writer.addDocument(doc);
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.FLOAT));
+                     Collections.singletonMap("value", Type.LEGACY_FLOAT));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -736,7 +736,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     doc.add(new LegacyFloatField("value", 4.2f, Field.Store.YES));
     writer.addDocument(doc);
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.FLOAT));
+                     Collections.singletonMap("value", Type.LEGACY_FLOAT));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -766,7 +766,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     doc.add(new LegacyFloatField("value", 4.2f, Field.Store.YES));
     writer.addDocument(doc);
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.FLOAT));
+                     Collections.singletonMap("value", Type.LEGACY_FLOAT));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -799,7 +799,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     doc.add(new LegacyFloatField("value", 4.2f, Field.Store.YES));
     writer.addDocument(doc);
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.FLOAT));
+                     Collections.singletonMap("value", Type.LEGACY_FLOAT));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -833,7 +833,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     doc.add(new LegacyDoubleField("value", 4.2333333333332, Field.Store.YES));
     writer.addDocument(doc);
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.DOUBLE));
+                     Collections.singletonMap("value", Type.LEGACY_DOUBLE));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -863,7 +863,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     writer.addDocument(doc);
     doc = new Document();
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.DOUBLE));
+                     Collections.singletonMap("value", Type.LEGACY_DOUBLE));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -900,7 +900,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     doc.add(new LegacyDoubleField("value", 4.2333333333332, Field.Store.YES));
     writer.addDocument(doc);
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.DOUBLE));
+                     Collections.singletonMap("value", Type.LEGACY_DOUBLE));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -934,7 +934,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     doc.add(new LegacyDoubleField("value", 4.2333333333332, Field.Store.YES));
     writer.addDocument(doc);
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.DOUBLE));
+                     Collections.singletonMap("value", Type.LEGACY_DOUBLE));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -971,7 +971,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     doc.add(new LegacyDoubleField("value", 4.2333333333332, Field.Store.YES));
     writer.addDocument(doc);
     IndexReader ir = UninvertingReader.wrap(writer.getReader(), 
-                     Collections.singletonMap("value", Type.DOUBLE));
+                     Collections.singletonMap("value", Type.LEGACY_DOUBLE));
     writer.close();
     
     IndexSearcher searcher = newSearcher(ir);
@@ -1062,7 +1062,7 @@ public class TestFieldCacheSort extends LuceneTestCase {
     }
 
     IndexReader r = UninvertingReader.wrap(DirectoryReader.open(w),
-                    Collections.singletonMap("id", Type.INTEGER));
+                    Collections.singletonMap("id", Type.LEGACY_INTEGER));
     w.close();
     Query q = new TermQuery(new Term("body", "text"));
     IndexSearcher s = newSearcher(r);
