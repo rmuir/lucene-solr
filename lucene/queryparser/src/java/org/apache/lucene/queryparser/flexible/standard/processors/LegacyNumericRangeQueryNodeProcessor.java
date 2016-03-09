@@ -30,32 +30,32 @@ import org.apache.lucene.queryparser.flexible.core.nodes.FieldQueryNode;
 import org.apache.lucene.queryparser.flexible.core.nodes.QueryNode;
 import org.apache.lucene.queryparser.flexible.core.processors.QueryNodeProcessorImpl;
 import org.apache.lucene.queryparser.flexible.core.util.StringUtils;
-import org.apache.lucene.queryparser.flexible.standard.config.NumericConfig;
+import org.apache.lucene.queryparser.flexible.standard.config.LegacyNumericConfig;
 import org.apache.lucene.queryparser.flexible.standard.config.StandardQueryConfigHandler.ConfigurationKeys;
-import org.apache.lucene.queryparser.flexible.standard.nodes.NumericQueryNode;
-import org.apache.lucene.queryparser.flexible.standard.nodes.NumericRangeQueryNode;
+import org.apache.lucene.queryparser.flexible.standard.nodes.LegacyNumericQueryNode;
+import org.apache.lucene.queryparser.flexible.standard.nodes.LegacyNumericRangeQueryNode;
 import org.apache.lucene.queryparser.flexible.standard.nodes.TermRangeQueryNode;
 
 /**
  * This processor is used to convert {@link TermRangeQueryNode}s to
- * {@link NumericRangeQueryNode}s. It looks for
- * {@link ConfigurationKeys#NUMERIC_CONFIG} set in the {@link FieldConfig} of
+ * {@link LegacyNumericRangeQueryNode}s. It looks for
+ * {@link ConfigurationKeys#LEGACY_NUMERIC_CONFIG} set in the {@link FieldConfig} of
  * every {@link TermRangeQueryNode} found. If
- * {@link ConfigurationKeys#NUMERIC_CONFIG} is found, it considers that
+ * {@link ConfigurationKeys#LEGACY_NUMERIC_CONFIG} is found, it considers that
  * {@link TermRangeQueryNode} to be a numeric range query and convert it to
- * {@link NumericRangeQueryNode}.
+ * {@link LegacyNumericRangeQueryNode}.
  * 
- * @see ConfigurationKeys#NUMERIC_CONFIG
+ * @see ConfigurationKeys#LEGACY_NUMERIC_CONFIG
  * @see TermRangeQueryNode
- * @see NumericConfig
- * @see NumericRangeQueryNode
+ * @see LegacyNumericConfig
+ * @see LegacyNumericRangeQueryNode
  */
-public class NumericRangeQueryNodeProcessor extends QueryNodeProcessorImpl {
+public class LegacyNumericRangeQueryNodeProcessor extends QueryNodeProcessorImpl {
   
   /**
-   * Constructs an empty {@link NumericRangeQueryNode} object.
+   * Constructs an empty {@link LegacyNumericRangeQueryNode} object.
    */
-  public NumericRangeQueryNodeProcessor() {
+  public LegacyNumericRangeQueryNodeProcessor() {
   // empty constructor
   }
   
@@ -72,8 +72,8 @@ public class NumericRangeQueryNodeProcessor extends QueryNodeProcessorImpl {
         
         if (fieldConfig != null) {
           
-          NumericConfig numericConfig = fieldConfig
-              .get(ConfigurationKeys.NUMERIC_CONFIG);
+          LegacyNumericConfig numericConfig = fieldConfig
+              .get(ConfigurationKeys.LEGACY_NUMERIC_CONFIG);
           
           if (numericConfig != null) {
             
@@ -131,15 +131,15 @@ public class NumericRangeQueryNodeProcessor extends QueryNodeProcessorImpl {
                 if (lowerNumber != null) lowerNumber = lowerNumber.floatValue();
             }
             
-            NumericQueryNode lowerNode = new NumericQueryNode(
+            LegacyNumericQueryNode lowerNode = new LegacyNumericQueryNode(
                 termRangeNode.getField(), lowerNumber, numberFormat);
-            NumericQueryNode upperNode = new NumericQueryNode(
+            LegacyNumericQueryNode upperNode = new LegacyNumericQueryNode(
                 termRangeNode.getField(), upperNumber, numberFormat);
             
             boolean lowerInclusive = termRangeNode.isLowerInclusive();
             boolean upperInclusive = termRangeNode.isUpperInclusive();
             
-            return new NumericRangeQueryNode(lowerNode, upperNode,
+            return new LegacyNumericRangeQueryNode(lowerNode, upperNode,
                 lowerInclusive, upperInclusive, numericConfig);
             
           }

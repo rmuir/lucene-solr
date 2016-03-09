@@ -30,19 +30,19 @@ import org.apache.lucene.queryparser.flexible.core.nodes.FieldQueryNode;
 import org.apache.lucene.queryparser.flexible.core.nodes.QueryNode;
 import org.apache.lucene.queryparser.flexible.core.nodes.RangeQueryNode;
 import org.apache.lucene.queryparser.flexible.core.processors.QueryNodeProcessorImpl;
-import org.apache.lucene.queryparser.flexible.standard.config.NumericConfig;
+import org.apache.lucene.queryparser.flexible.standard.config.LegacyNumericConfig;
 import org.apache.lucene.queryparser.flexible.standard.config.StandardQueryConfigHandler.ConfigurationKeys;
-import org.apache.lucene.queryparser.flexible.standard.nodes.NumericQueryNode;
-import org.apache.lucene.queryparser.flexible.standard.nodes.NumericRangeQueryNode;
+import org.apache.lucene.queryparser.flexible.standard.nodes.LegacyNumericQueryNode;
+import org.apache.lucene.queryparser.flexible.standard.nodes.LegacyNumericRangeQueryNode;
 
 /**
  * This processor is used to convert {@link FieldQueryNode}s to
- * {@link NumericRangeQueryNode}s. It looks for
- * {@link ConfigurationKeys#NUMERIC_CONFIG} set in the {@link FieldConfig} of
+ * {@link LegacyNumericRangeQueryNode}s. It looks for
+ * {@link ConfigurationKeys#LEGACY_NUMERIC_CONFIG} set in the {@link FieldConfig} of
  * every {@link FieldQueryNode} found. If
- * {@link ConfigurationKeys#NUMERIC_CONFIG} is found, it considers that
+ * {@link ConfigurationKeys#LEGACY_NUMERIC_CONFIG} is found, it considers that
  * {@link FieldQueryNode} to be a numeric query and convert it to
- * {@link NumericRangeQueryNode} with upper and lower inclusive and lower and
+ * {@link LegacyNumericRangeQueryNode} with upper and lower inclusive and lower and
  * upper equals to the value represented by the {@link FieldQueryNode} converted
  * to {@link Number}. It means that <b>field:1</b> is converted to <b>field:[1
  * TO 1]</b>. <br>
@@ -50,17 +50,17 @@ import org.apache.lucene.queryparser.flexible.standard.nodes.NumericRangeQueryNo
  * Note that {@link FieldQueryNode}s children of a
  * {@link RangeQueryNode} are ignored.
  * 
- * @see ConfigurationKeys#NUMERIC_CONFIG
+ * @see ConfigurationKeys#LEGACY_NUMERIC_CONFIG
  * @see FieldQueryNode
- * @see NumericConfig
- * @see NumericQueryNode
+ * @see LegacyNumericConfig
+ * @see LegacyNumericQueryNode
  */
-public class NumericQueryNodeProcessor extends QueryNodeProcessorImpl {
+public class LegacyNumericQueryNodeProcessor extends QueryNodeProcessorImpl {
   
   /**
-   * Constructs a {@link NumericQueryNodeProcessor} object.
+   * Constructs a {@link LegacyNumericQueryNodeProcessor} object.
    */
-  public NumericQueryNodeProcessor() {
+  public LegacyNumericQueryNodeProcessor() {
   // empty constructor
   }
   
@@ -78,8 +78,8 @@ public class NumericQueryNodeProcessor extends QueryNodeProcessorImpl {
             .getFieldAsString());
         
         if (fieldConfig != null) {
-          NumericConfig numericConfig = fieldConfig
-              .get(ConfigurationKeys.NUMERIC_CONFIG);
+          LegacyNumericConfig numericConfig = fieldConfig
+              .get(ConfigurationKeys.LEGACY_NUMERIC_CONFIG);
           
           if (numericConfig != null) {
             
@@ -118,12 +118,12 @@ public class NumericQueryNodeProcessor extends QueryNodeProcessorImpl {
                   QueryParserMessages.NUMERIC_CANNOT_BE_EMPTY, fieldNode.getFieldAsString()));
             }
             
-            NumericQueryNode lowerNode = new NumericQueryNode(fieldNode
+            LegacyNumericQueryNode lowerNode = new LegacyNumericQueryNode(fieldNode
                 .getField(), number, numberFormat);
-            NumericQueryNode upperNode = new NumericQueryNode(fieldNode
+            LegacyNumericQueryNode upperNode = new LegacyNumericQueryNode(fieldNode
                 .getField(), number, numberFormat);
             
-            return new NumericRangeQueryNode(lowerNode, upperNode, true, true,
+            return new LegacyNumericRangeQueryNode(lowerNode, upperNode, true, true,
                 numericConfig);
             
           }

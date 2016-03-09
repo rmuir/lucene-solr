@@ -24,16 +24,16 @@ import org.apache.lucene.queryparser.flexible.core.nodes.FieldValuePairQueryNode
 import org.apache.lucene.queryparser.flexible.core.nodes.QueryNodeImpl;
 import org.apache.lucene.queryparser.flexible.core.parser.EscapeQuerySyntax;
 import org.apache.lucene.queryparser.flexible.core.parser.EscapeQuerySyntax.Type;
-import org.apache.lucene.queryparser.flexible.standard.config.NumericConfig;
+import org.apache.lucene.queryparser.flexible.standard.config.LegacyNumericConfig;
 
 /**
  * This query node represents a field query that holds a numeric value. It is
  * similar to {@link FieldQueryNode}, however the {@link #getValue()} returns a
  * {@link Number}.
  * 
- * @see NumericConfig
+ * @see LegacyNumericConfig
  */
-public class NumericQueryNode extends QueryNodeImpl implements
+public class LegacyNumericQueryNode extends QueryNodeImpl implements
     FieldValuePairQueryNode<Number> {
   
   private NumberFormat numberFormat;
@@ -43,7 +43,7 @@ public class NumericQueryNode extends QueryNodeImpl implements
   private Number value;
   
   /**
-   * Creates a {@link NumericQueryNode} object using the given field,
+   * Creates a {@link LegacyNumericQueryNode} object using the given field,
    * {@link Number} value and {@link NumberFormat} used to convert the value to
    * {@link String}.
    * 
@@ -51,7 +51,7 @@ public class NumericQueryNode extends QueryNodeImpl implements
    * @param value the value hold by this node
    * @param numberFormat the {@link NumberFormat} used to convert the value to {@link String}
    */
-  public NumericQueryNode(CharSequence field, Number value,
+  public LegacyNumericQueryNode(CharSequence field, Number value,
       NumberFormat numberFormat) {
     
     super();

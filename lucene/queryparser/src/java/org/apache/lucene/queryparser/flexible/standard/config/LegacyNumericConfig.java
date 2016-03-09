@@ -29,7 +29,7 @@ import org.apache.lucene.document.FieldType.LegacyNumericType;
  * @see org.apache.lucene.search.LegacyNumericRangeQuery
  * @see NumberFormat
  */
-public class NumericConfig {
+public class LegacyNumericConfig {
   
   private int precisionStep;
   
@@ -38,7 +38,7 @@ public class NumericConfig {
   private FieldType.LegacyNumericType type;
   
   /**
-   * Constructs a {@link NumericConfig} object.
+   * Constructs a {@link LegacyNumericConfig} object.
    * 
    * @param precisionStep
    *          the precision used to index the numeric values
@@ -48,11 +48,11 @@ public class NumericConfig {
    * @param type
    *          the numeric type used to index the numeric values
    * 
-   * @see NumericConfig#setPrecisionStep(int)
-   * @see NumericConfig#setNumberFormat(NumberFormat)
+   * @see LegacyNumericConfig#setPrecisionStep(int)
+   * @see LegacyNumericConfig#setNumberFormat(NumberFormat)
    * @see #setType(org.apache.lucene.document.FieldType.LegacyNumericType)
    */
-  public NumericConfig(int precisionStep, NumberFormat format,
+  public LegacyNumericConfig(int precisionStep, NumberFormat format,
       LegacyNumericType type) {
     setPrecisionStep(precisionStep);
     setNumberFormat(format);
@@ -141,8 +141,8 @@ public class NumericConfig {
     
     if (obj == this) return true;
     
-    if (obj instanceof NumericConfig) {
-      NumericConfig other = (NumericConfig) obj;
+    if (obj instanceof LegacyNumericConfig) {
+      LegacyNumericConfig other = (LegacyNumericConfig) obj;
       
       if (this.precisionStep == other.precisionStep
           && this.type == other.type

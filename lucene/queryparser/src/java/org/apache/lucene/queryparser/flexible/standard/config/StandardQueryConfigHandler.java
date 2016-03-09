@@ -167,20 +167,20 @@ public class StandardQueryConfigHandler extends QueryConfigHandler {
     final public static ConfigurationKey<Float> BOOST = ConfigurationKey.newInstance();
     
     /**
-     * Key used to set a field to its {@link NumericConfig}.
+     * Key used to set a field to its {@link LegacyNumericConfig}.
      * 
      * @see StandardQueryParser#setNumericConfigMap(Map)
      * @see StandardQueryParser#getNumericConfigMap()
      */
-    final public static ConfigurationKey<NumericConfig> NUMERIC_CONFIG = ConfigurationKey.newInstance();
+    final public static ConfigurationKey<LegacyNumericConfig> LEGACY_NUMERIC_CONFIG = ConfigurationKey.newInstance();
     
     /**
-     * Key used to set the {@link NumericConfig} in {@link FieldConfig} for numeric fields.
+     * Key used to set the {@link LegacyNumericConfig} in {@link FieldConfig} for numeric fields.
      * 
      * @see StandardQueryParser#setNumericConfigMap(Map)
      * @see StandardQueryParser#getNumericConfigMap()
      */
-    final public static ConfigurationKey<Map<String,NumericConfig>> NUMERIC_CONFIG_MAP = ConfigurationKey.newInstance();
+    final public static ConfigurationKey<Map<String,LegacyNumericConfig>> LEGACY_NUMERIC_CONFIG_MAP = ConfigurationKey.newInstance();
     
   }
   
@@ -195,7 +195,7 @@ public class StandardQueryConfigHandler extends QueryConfigHandler {
     // Add listener that will build the FieldConfig.
     addFieldConfigListener(new FieldBoostMapFCListener(this));
     addFieldConfigListener(new FieldDateResolutionFCListener(this));
-    addFieldConfigListener(new NumericFieldConfigListener(this));
+    addFieldConfigListener(new LegacyNumericFieldConfigListener(this));
     
     // Default Values
     set(ConfigurationKeys.ALLOW_LEADING_WILDCARD, false); // default in 2.9
