@@ -50,8 +50,8 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.LeafReader;
 import org.apache.lucene.index.LeafReaderContext;
-import org.apache.lucene.index.MultiDocValues;
 import org.apache.lucene.index.MultiDocValues.OrdinalMap;
+import org.apache.lucene.index.MultiDocValues;
 import org.apache.lucene.index.MultiFields;
 import org.apache.lucene.index.NoMergePolicy;
 import org.apache.lucene.index.NumericDocValues;
@@ -89,6 +89,7 @@ import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.FixedBitSet;
 import org.apache.lucene.util.LuceneTestCase;
+import org.apache.lucene.util.NumericUtils;
 import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.packed.PackedInts;
 import org.junit.Test;
@@ -1304,11 +1305,16 @@ public class TestJoinUtil extends LuceneTestCase {
       boolean multipleValuesPerDocument, boolean globalOrdinalJoin) {
     document.add(newTextField(random, fieldName, linkValue, Field.Store.NO));
 
+    // TODO: move away from postings here!!  But TermsIncludingScoreQuery (at least) is doing seekExact against the postings...
     final int linkInt = Integer.parseUnsignedInt(linkValue,16);
-    document.add(new IntPoint(fieldName+ "Integer", linkInt));
+    byte[] bytes = new byte[Integer.BYTES];
+    NumericUtils.intToSortableBytes(linkInt, bytes, 0);
+    document.add(new StringField(fieldName+ "Integer", new BytesRef(bytes), Field.Store.NO));
 
     final long linkLong = linkInt<<32 | linkInt;
-    document.add(new LongPoint(fieldName+ "Long", linkLong));
+    bytes = new byte[Long.BYTES];
+    NumericUtils.longToSortableBytes(linkLong, bytes, 0);
+    document.add(new StringField(fieldName+ "Long", new BytesRef(bytes), Field.Store.NO));
 
     if (multipleValuesPerDocument) {
       document.add(new SortedSetDocValuesField(fieldName, new BytesRef(linkValue)));

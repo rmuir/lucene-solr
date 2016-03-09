@@ -134,7 +134,7 @@ class TermsIncludingScoreQuery extends Query {
               postingsEnum = segmentTermsEnum.postings(postingsEnum, PostingsEnum.NONE);
               if (postingsEnum.advance(doc) == doc) {
                 final float score = TermsIncludingScoreQuery.this.scores[ords[i]];
-                return Explanation.match(score, "Score based on join value " + segmentTermsEnum.term().utf8ToString());
+                return Explanation.match(score, "Score based on join value " + segmentTermsEnum.term());
               }
             }
           }
