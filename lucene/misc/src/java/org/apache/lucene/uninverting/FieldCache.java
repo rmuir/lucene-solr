@@ -197,10 +197,32 @@ interface FieldCache {
    * @return The values in the given field for each document.
    * @throws IOException
    *           If any error occurs.
-   * @deprecated Uninvert point values with {@link getNumerics} instead.
+   * @deprecated Uninvert point values with {@link #getNumerics} instead.
    */
   @Deprecated
   public NumericDocValues getLegacyNumerics(LeafReader reader, String field, Parser parser, boolean setDocsWithField) throws IOException;
+  
+  /**
+   * Returns a {@link NumericDocValues} over the values found in documents in the given
+   * field. If the field was indexed as {@link NumericDocValuesField}, it simply
+   * uses {@link org.apache.lucene.index.LeafReader#getNumericDocValues(String)} to read the values.
+   * Otherwise, it checks the internal cache for an appropriate entry, and if
+   * none is found, reads the points in <code>field</code> as longs and returns
+   * an array of size <code>reader.maxDoc()</code> of the value each document
+   * has in the given field.
+   * 
+   * @param reader
+   *          Used to get field values.
+   * @param field
+   *          Which field contains the longs.
+   * @param setDocsWithField
+   *          If true then {@link #getDocsWithField} will also be computed and
+   *          stored in the FieldCache.
+   * @return The values in the given field for each document.
+   * @throws IOException
+   *           If any error occurs.
+   */
+  public NumericDocValues getNumerics(LeafReader reader, String field, boolean setDocsWithField) throws IOException;
 
   /** Checks the internal cache for an appropriate entry, and if none
    * is found, reads the term values in <code>field</code>
