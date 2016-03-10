@@ -464,9 +464,48 @@ class FieldCacheImpl implements FieldCache {
     }
     
     @Override
-    protected BitsEntry createValue(LeafReader reader, CacheKey key, boolean setDocsWithField /* ignored */)
-    throws IOException {
+    protected BitsEntry createValue(LeafReader reader, CacheKey key, boolean setDocsWithField /* ignored */) throws IOException {
       final String field = key.field;
+      final Parser parser = (Parser) key.custom;
+      if (parser instanceof PointParser) {
+        return createValuePoints(reader, field);
+      } else {
+        return createValuePostings(reader, field);
+      }
+    }
+  
+    private BitsEntry createValuePoints(LeafReader reader, String field) throws IOException {
+      final int maxDoc = reader.maxDoc();
+      PointValues values = reader.getPointValues();
+      assert values != null;
+      assert values.size(field) > 0;
+      
+      final int docCount = values.getDocCount(field);
+      assert docCount <= maxDoc;
+      if (docCount == maxDoc) {
+        // Fast case: all docs have this field:
+        return new BitsEntry(new Bits.MatchAllBits(maxDoc));
+      }
+      
+      // otherwise a no-op uninvert!
+      Uninvert u = new Uninvert(true) {
+        @Override
+        protected TermsEnum termsEnum(Terms terms) throws IOException {
+          throw new AssertionError();
+        }
+
+        @Override
+        protected void visitTerm(BytesRef term) {}
+
+        @Override
+        protected void visitDoc(int docID) {}
+      };
+      u.uninvert(reader, field, true);
+      return new BitsEntry(u.docsWithField);
+    }
+    
+    // TODO: it is dumb that uninverting code is duplicated here in this method!!
+    private BitsEntry createValuePostings(LeafReader reader, String field) throws IOException {
       final int maxDoc = reader.maxDoc();
 
       // Visit all docs that have terms for this field
