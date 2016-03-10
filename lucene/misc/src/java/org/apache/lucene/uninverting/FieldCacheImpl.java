@@ -353,7 +353,7 @@ class FieldCacheImpl implements FieldCache {
     public long minValue;
   }
 
-  public Bits getDocsWithField(LeafReader reader, String field) throws IOException {
+  public Bits getDocsWithField(LeafReader reader, String field, Parser parser) throws IOException {
     final FieldInfo fieldInfo = reader.getFieldInfos().fieldInfo(field);
     if (fieldInfo == null) {
       // field does not exist or has no value
@@ -363,7 +363,7 @@ class FieldCacheImpl implements FieldCache {
     } else if (fieldInfo.getIndexOptions() == IndexOptions.NONE) {
       return new Bits.MatchNoBits(reader.maxDoc());
     }
-    BitsEntry bitsEntry = (BitsEntry) caches.get(DocsWithFieldCache.class).get(reader, new CacheKey(field, null), false);
+    BitsEntry bitsEntry = (BitsEntry) caches.get(DocsWithFieldCache.class).get(reader, new CacheKey(field, parser), false);
     return bitsEntry.bits;
   }
   
@@ -443,7 +443,7 @@ class FieldCacheImpl implements FieldCache {
   }
   
   @Override
-  public NumericDocValues getLegacyNumerics(LeafReader reader, String field, Parser parser, boolean setDocsWithField) throws IOException {
+  public NumericDocValues getNumerics(LeafReader reader, String field, Parser parser, boolean setDocsWithField) throws IOException {
     if (parser == null) {
       throw new NullPointerException();
     }

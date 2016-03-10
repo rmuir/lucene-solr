@@ -83,7 +83,7 @@ public class TestFieldCacheWithThreads extends LuceneTestCase {
           public void run() {
             try {
               //NumericDocValues ndv = ar.getNumericDocValues("number");
-              NumericDocValues ndv = FieldCache.DEFAULT.getLegacyNumerics(ar, "number", FieldCache.NUMERIC_UTILS_LONG_PARSER, false);
+              NumericDocValues ndv = FieldCache.DEFAULT.getNumerics(ar, "number", FieldCache.LEGACY_LONG_PARSER, false);
               //BinaryDocValues bdv = ar.getBinaryDocValues("bytes");
               BinaryDocValues bdv = FieldCache.DEFAULT.getTerms(ar, "bytes", false);
               SortedDocValues sdv = FieldCache.DEFAULT.getTermsIndex(ar, "sorted");
@@ -93,16 +93,16 @@ public class TestFieldCacheWithThreads extends LuceneTestCase {
                 int docID = threadRandom.nextInt(numDocs);
                 switch(threadRandom.nextInt(4)) {
                 case 0:
-                  assertEquals(numbers.get(docID).longValue(), FieldCache.DEFAULT.getLegacyNumerics(ar, "number", FieldCache.NUMERIC_UTILS_INT_PARSER, false).get(docID));
+                  assertEquals(numbers.get(docID).longValue(), FieldCache.DEFAULT.getNumerics(ar, "number", FieldCache.LEGACY_INT_PARSER, false).get(docID));
                   break;
                 case 1:
-                  assertEquals(numbers.get(docID).longValue(), FieldCache.DEFAULT.getLegacyNumerics(ar, "number", FieldCache.NUMERIC_UTILS_LONG_PARSER, false).get(docID));
+                  assertEquals(numbers.get(docID).longValue(), FieldCache.DEFAULT.getNumerics(ar, "number", FieldCache.LEGACY_LONG_PARSER, false).get(docID));
                   break;
                 case 2:
-                  assertEquals(numbers.get(docID).longValue(), FieldCache.DEFAULT.getLegacyNumerics(ar, "number", FieldCache.NUMERIC_UTILS_FLOAT_PARSER, false).get(docID));
+                  assertEquals(numbers.get(docID).longValue(), FieldCache.DEFAULT.getNumerics(ar, "number", FieldCache.LEGACY_FLOAT_PARSER, false).get(docID));
                   break;
                 case 3:
-                  assertEquals(numbers.get(docID).longValue(), FieldCache.DEFAULT.getLegacyNumerics(ar, "number", FieldCache.NUMERIC_UTILS_DOUBLE_PARSER, false).get(docID));
+                  assertEquals(numbers.get(docID).longValue(), FieldCache.DEFAULT.getNumerics(ar, "number", FieldCache.LEGACY_DOUBLE_PARSER, false).get(docID));
                   break;
                 }
                 BytesRef term = bdv.get(docID);
