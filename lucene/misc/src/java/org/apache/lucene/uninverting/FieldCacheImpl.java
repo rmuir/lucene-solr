@@ -34,6 +34,9 @@ import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.LeafReader;
 import org.apache.lucene.index.NumericDocValues;
+import org.apache.lucene.index.PointValues;
+import org.apache.lucene.index.PointValues.IntersectVisitor;
+import org.apache.lucene.index.PointValues.Relation;
 import org.apache.lucene.index.SegmentReader;
 import org.apache.lucene.index.SortedDocValues;
 import org.apache.lucene.index.SortedSetDocValues;
@@ -262,8 +265,68 @@ class FieldCacheImpl implements FieldCache {
   private static abstract class Uninvert {
 
     public Bits docsWithField;
+    final boolean points;
+    
+    // pass true to pull from points, otherwise postings.
+    Uninvert(boolean points) {
+      this.points = points;
+    }
 
-    public void uninvert(LeafReader reader, String field, boolean setDocsWithField) throws IOException {
+    final void uninvert(LeafReader reader, String field, boolean setDocsWithField) throws IOException {
+      if (points) {
+        uninvertPoints(reader, field, setDocsWithField);
+      } else {
+        uninvertPostings(reader, field, setDocsWithField);
+      }
+    }
+    
+    final void uninvertPoints(LeafReader reader, String field, boolean setDocsWithField) throws IOException {
+      final int maxDoc = reader.maxDoc();
+      PointValues values = reader.getPointValues();
+      assert values != null;
+      assert values.size(field) > 0;
+      
+      if (setDocsWithField) {
+        final int docCount = values.getDocCount(field);
+        assert docCount <= maxDoc;
+        if (docCount == maxDoc) {
+          // Fast case: all docs have this field:
+          this.docsWithField = new Bits.MatchAllBits(maxDoc);
+          setDocsWithField = false;
+        }
+      }
+
+      final boolean doDocsWithField = setDocsWithField;
+      BytesRef scratch = new BytesRef();
+      values.intersect(field, new IntersectVisitor() {
+        @Override
+        public void visit(int docID) throws IOException { 
+          throw new AssertionError(); 
+        }
+
+        @Override
+        public void visit(int docID, byte[] packedValue) throws IOException {
+          scratch.bytes = packedValue;
+          scratch.length = packedValue.length;
+          visitTerm(scratch);
+          visitDoc(docID);
+          if (doDocsWithField) {
+            if (docsWithField == null) {
+              // Lazy init
+              docsWithField = new FixedBitSet(maxDoc);
+            }
+            ((FixedBitSet)docsWithField).set(docID);
+          }
+        }
+
+        @Override
+        public Relation compare(byte[] minPackedValue, byte[] maxPackedValue) {
+          return Relation.CELL_CROSSES_QUERY; // inspect all byte-docid pairs
+        }
+      });
+    }
+    
+    final void uninvertPostings(LeafReader reader, String field, boolean setDocsWithField) throws IOException {
       final int maxDoc = reader.maxDoc();
       Terms terms = reader.terms(field);
       if (terms != null) {
@@ -306,6 +369,8 @@ class FieldCacheImpl implements FieldCache {
       }
     }
 
+    /** @deprecated remove this when legacy numerics are removed */
+    @Deprecated
     protected abstract TermsEnum termsEnum(Terms terms) throws IOException;
     protected abstract void visitTerm(BytesRef term);
     protected abstract void visitDoc(int docID);
@@ -360,8 +425,16 @@ class FieldCacheImpl implements FieldCache {
       return new Bits.MatchNoBits(reader.maxDoc());
     } else if (fieldInfo.getDocValuesType() != DocValuesType.NONE) {
       return reader.getDocsWithField(field);
-    } else if (fieldInfo.getIndexOptions() == IndexOptions.NONE) {
-      return new Bits.MatchNoBits(reader.maxDoc());
+    } 
+    
+    if (parser instanceof PointParser) {
+      // points case
+      
+    } else {
+      // postings case
+      if (fieldInfo.getIndexOptions() == IndexOptions.NONE) {
+        return new Bits.MatchNoBits(reader.maxDoc());
+      }
     }
     BitsEntry bitsEntry = (BitsEntry) caches.get(DocsWithFieldCache.class).get(reader, new CacheKey(field, parser), false);
     return bitsEntry.bits;
@@ -458,8 +531,32 @@ class FieldCacheImpl implements FieldCache {
         return DocValues.emptyNumeric();
       } else if (info.getDocValuesType() != DocValuesType.NONE) {
         throw new IllegalStateException("Type mismatch: " + field + " was indexed as " + info.getDocValuesType());
-      } else if (info.getIndexOptions() == IndexOptions.NONE) {
-        return DocValues.emptyNumeric();
+      }
+      
+      if (parser instanceof PointParser) {
+        // points case
+        // no points in this segment
+        if (info.getPointDimensionCount() == 0) {
+          return DocValues.emptyNumeric();
+        }
+        if (info.getPointDimensionCount() != 1) {
+          throw new IllegalStateException("Type mismatch: " + field + " was indexed with dimensions=" + info.getPointDimensionCount());
+        }
+        PointValues values = reader.getPointValues();
+        // no actual points for this field (e.g. all points deleted)
+        if (values == null || values.size(field) == 0) {
+          return DocValues.emptyNumeric();
+        }
+        // not single-valued
+        if (values.size(field) != values.getDocCount(field)) {
+          throw new IllegalStateException("Type mismatch: " + field + " was indexed with multiple values, numValues=" + values.size(field) + ",numDocs=" + values.getDocCount(field));
+        }
+      } else {
+        // postings case 
+        // not indexed
+        if (info.getIndexOptions() == IndexOptions.NONE) {
+          return DocValues.emptyNumeric();
+        }
       }
       return (NumericDocValues) caches.get(Long.TYPE).get(reader, new CacheKey(field, parser), setDocsWithField);
     }
@@ -498,7 +595,7 @@ class FieldCacheImpl implements FieldCache {
 
       final HoldsOneThing<GrowableWriterAndMinValue> valuesRef = new HoldsOneThing<>();
 
-      Uninvert u = new Uninvert() {
+      Uninvert u = new Uninvert(parser instanceof PointParser) {
           private long minValue;
           private long currentValue;
           private GrowableWriter values;
