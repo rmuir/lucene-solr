@@ -377,7 +377,7 @@ class FieldCacheImpl implements FieldCache {
   }
 
   // null Bits means no docs matched
-  void setDocsWithField(LeafReader reader, String field, Bits docsWithField) {
+  void setDocsWithField(LeafReader reader, String field, Bits docsWithField, Parser parser) {
     final int maxDoc = reader.maxDoc();
     final Bits bits;
     if (docsWithField == null) {
@@ -394,7 +394,7 @@ class FieldCacheImpl implements FieldCache {
     } else {
       bits = docsWithField;
     }
-    caches.get(DocsWithFieldCache.class).put(reader, new CacheKey(field, null), new BitsEntry(bits));
+    caches.get(DocsWithFieldCache.class).put(reader, new CacheKey(field, parser), new BitsEntry(bits));
   }
 
   private static class HoldsOneThing<T> {
@@ -678,7 +678,7 @@ class FieldCacheImpl implements FieldCache {
       u.uninvert(reader, key.field, setDocsWithField);
 
       if (setDocsWithField) {
-        wrapper.setDocsWithField(reader, key.field, u.docsWithField);
+        wrapper.setDocsWithField(reader, key.field, u.docsWithField, parser);
       }
       GrowableWriterAndMinValue values = valuesRef.get();
       if (values == null) {
@@ -1008,7 +1008,7 @@ class FieldCacheImpl implements FieldCache {
           public int length() {
             return maxDoc;
           }
-        });
+        }, null);
       }
       // maybe an int-only impl?
       return new BinaryDocValuesImpl(bytes.freeze(true), offsetReader);
