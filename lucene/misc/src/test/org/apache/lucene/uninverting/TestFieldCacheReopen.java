@@ -18,9 +18,7 @@ package org.apache.lucene.uninverting;
 
 import org.apache.lucene.analysis.MockAnalyzer;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
 import org.apache.lucene.document.IntPoint;
-import org.apache.lucene.document.LegacyIntField;
 import org.apache.lucene.index.LeafReader;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
@@ -63,41 +61,6 @@ public class TestFieldCacheReopen extends LuceneTestCase {
     r.close();
     LeafReader sub0 = r2.leaves().get(0).reader();
     final NumericDocValues ints2 = FieldCache.DEFAULT.getNumerics(sub0, "number", FieldCache.INT_POINT_PARSER, false);
-    r2.close();
-    assertTrue(ints == ints2);
-  
-    writer.close();
-    dir.close();
-  }
-  
-  public void testFieldCacheReuseAfterReopenLegacy() throws Exception {
-    Directory dir = newDirectory();
-    IndexWriter writer = new IndexWriter(
-        dir,
-        newIndexWriterConfig(new MockAnalyzer(random())).
-            setMergePolicy(newLogMergePolicy(10))
-    );
-    Document doc = new Document();
-    doc.add(new LegacyIntField("number", 17, Field.Store.NO));
-    writer.addDocument(doc);
-    writer.commit();
-  
-    // Open reader1
-    DirectoryReader r = DirectoryReader.open(dir);
-    LeafReader r1 = getOnlySegmentReader(r);
-    final NumericDocValues ints = FieldCache.DEFAULT.getNumerics(r1, "number", FieldCache.LEGACY_INT_PARSER, false);
-    assertEquals(17, ints.get(0));
-  
-    // Add new segment
-    writer.addDocument(doc);
-    writer.commit();
-  
-    // Reopen reader1 --> reader2
-    DirectoryReader r2 = DirectoryReader.openIfChanged(r);
-    assertNotNull(r2);
-    r.close();
-    LeafReader sub0 = r2.leaves().get(0).reader();
-    final NumericDocValues ints2 = FieldCache.DEFAULT.getNumerics(sub0, "number", FieldCache.LEGACY_INT_PARSER, false);
     r2.close();
     assertTrue(ints == ints2);
   
