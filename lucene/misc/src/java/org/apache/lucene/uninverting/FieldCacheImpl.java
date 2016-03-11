@@ -39,10 +39,12 @@ import org.apache.lucene.index.PointValues.IntersectVisitor;
 import org.apache.lucene.index.PointValues.Relation;
 import org.apache.lucene.index.SegmentReader;
 import org.apache.lucene.index.SortedDocValues;
+import org.apache.lucene.index.SortedNumericDocValues;
 import org.apache.lucene.index.SortedSetDocValues;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.DocIdSetIterator;
+import org.apache.lucene.uninverting.FieldCache.PointParser;
 import org.apache.lucene.util.Accountable;
 import org.apache.lucene.util.Accountables;
 import org.apache.lucene.util.Bits;
@@ -1077,6 +1079,11 @@ class FieldCacheImpl implements FieldCache {
       BytesRef prefix = (BytesRef) key.custom;
       return new DocTermOrds(reader, null, key.field, prefix);
     }
+  }
+
+  @Override
+  public SortedNumericDocValues getSortedNumerics(LeafReader reader, String field, PointParser parser, boolean setDocsWithField) throws IOException {
+    throw new UnsupportedOperationException();
   }
 
   private volatile PrintStream infoStream;

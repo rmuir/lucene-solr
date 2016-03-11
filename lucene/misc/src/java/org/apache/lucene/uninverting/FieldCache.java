@@ -20,11 +20,13 @@ import java.io.IOException;
 import java.io.PrintStream;
 
 import org.apache.lucene.document.NumericDocValuesField;
+import org.apache.lucene.document.SortedNumericDocValuesField;
 import org.apache.lucene.index.LeafReader;
 import org.apache.lucene.index.BinaryDocValues;
 import org.apache.lucene.index.IndexReader; // javadocs
 import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.index.SortedDocValues;
+import org.apache.lucene.index.SortedNumericDocValues;
 import org.apache.lucene.index.SortedSetDocValues;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
@@ -328,6 +330,30 @@ interface FieldCache {
    *  first call for a given reader and field "wins",
    *  subsequent calls will share the same cache entry. */
   public SortedDocValues getTermsIndex(LeafReader reader, String field, float acceptableOverheadRatio) throws IOException;
+  
+  /**
+   * Returns a {@link SortedNumericDocValues} over the values found in documents in the given
+   * field. If the field was indexed as {@link NumericDocValuesField}, or {@link SortedNumericDocValuesField} it simply
+   * uses {@link LeafReader#getNumericDocValues(String)} or {@link LeafReader#getSortedNumericDocValues(String)} to read the values.
+   * Otherwise, it checks the internal cache for an appropriate entry, and if
+   * none is found, reads the points in <code>field</code> as longs and returns
+   * an array of size <code>reader.maxDoc()</code> of the values each document
+   * has in the given field.
+   * 
+   * @param reader
+   *          Used to get field values.
+   * @param field
+   *          Which field contains the longs.
+   * @param parser
+   *          Computes long for binary values.
+   * @param setDocsWithField
+   *          If true then {@link #getDocsWithField} will also be computed and
+   *          stored in the FieldCache.
+   * @return The values in the given field for each document.
+   * @throws IOException
+   *           If any error occurs.
+   */
+  public SortedNumericDocValues getSortedNumerics(LeafReader reader, String field, PointParser parser, boolean setDocsWithField) throws IOException;
 
   /** Can be passed to {@link #getDocTermOrds} to filter for 32-bit numeric terms */
   public static final BytesRef INT32_TERM_PREFIX = new BytesRef(new byte[] { LegacyNumericUtils.SHIFT_START_INT });

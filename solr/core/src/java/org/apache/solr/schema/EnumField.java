@@ -192,7 +192,7 @@ public class EnumField extends PrimitiveFieldType {
   @Override
   public Type getUninversionType(SchemaField sf) {
     if (sf.multiValued()) {
-      return Type.SORTED_SET_INTEGER;
+      return Type.LEGACY_SORTED_SET_INTEGER;
     } else {
       return Type.LEGACY_INTEGER;
     }

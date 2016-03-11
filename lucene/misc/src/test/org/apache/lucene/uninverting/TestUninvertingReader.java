@@ -70,7 +70,7 @@ public class TestUninvertingReader extends LuceneTestCase {
     iw.close();
     
     DirectoryReader ir = UninvertingReader.wrap(DirectoryReader.open(dir), 
-                         Collections.singletonMap("foo", Type.SORTED_SET_INTEGER));
+                         Collections.singletonMap("foo", Type.LEGACY_SORTED_SET_INTEGER));
     LeafReader ar = ir.leaves().get(0).reader();
     SortedSetDocValues v = ar.getSortedSetDocValues("foo");
     assertEquals(2, v.getValueCount());
@@ -111,7 +111,7 @@ public class TestUninvertingReader extends LuceneTestCase {
     iw.close();
     
     DirectoryReader ir = UninvertingReader.wrap(DirectoryReader.open(dir), 
-                         Collections.singletonMap("foo", Type.SORTED_SET_FLOAT));
+                         Collections.singletonMap("foo", Type.LEGACY_SORTED_SET_FLOAT));
     LeafReader ar = ir.leaves().get(0).reader();
     
     SortedSetDocValues v = ar.getSortedSetDocValues("foo");
@@ -153,7 +153,7 @@ public class TestUninvertingReader extends LuceneTestCase {
     iw.close();
     
     DirectoryReader ir = UninvertingReader.wrap(DirectoryReader.open(dir), 
-        Collections.singletonMap("foo", Type.SORTED_SET_LONG));
+        Collections.singletonMap("foo", Type.LEGACY_SORTED_SET_LONG));
     LeafReader ar = ir.leaves().get(0).reader();
     SortedSetDocValues v = ar.getSortedSetDocValues("foo");
     assertEquals(2, v.getValueCount());
@@ -219,7 +219,7 @@ public class TestUninvertingReader extends LuceneTestCase {
   }
 
 
-  /** Tests {@link Type#SORTED_SET_INTEGER} using Integer based fields, with and w/o precision steps */
+  /** Tests {@link Type#LEGACY_SORTED_SET_INTEGER} using Integer based fields, with and w/o precision steps */
   public void testSortedSetIntegerManyValues() throws IOException {
     final Directory dir = newDirectory();
     final IndexWriter iw = new IndexWriter(dir, newIndexWriterConfig(null));
@@ -228,10 +228,10 @@ public class TestUninvertingReader extends LuceneTestCase {
     NO_TRIE_TYPE.setNumericPrecisionStep(Integer.MAX_VALUE);
 
     final Map<String,Type> UNINVERT_MAP = new LinkedHashMap<String,Type>();
-    UNINVERT_MAP.put("notrie_single", Type.SORTED_SET_INTEGER);
-    UNINVERT_MAP.put("notrie_multi", Type.SORTED_SET_INTEGER);
-    UNINVERT_MAP.put("trie_single", Type.SORTED_SET_INTEGER);
-    UNINVERT_MAP.put("trie_multi", Type.SORTED_SET_INTEGER);
+    UNINVERT_MAP.put("notrie_single", Type.LEGACY_SORTED_SET_INTEGER);
+    UNINVERT_MAP.put("notrie_multi", Type.LEGACY_SORTED_SET_INTEGER);
+    UNINVERT_MAP.put("trie_single", Type.LEGACY_SORTED_SET_INTEGER);
+    UNINVERT_MAP.put("trie_multi", Type.LEGACY_SORTED_SET_INTEGER);
     final Set<String> MULTI_VALUES = new LinkedHashSet<String>();
     MULTI_VALUES.add("trie_multi");
     MULTI_VALUES.add("notrie_multi");

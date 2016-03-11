@@ -189,12 +189,12 @@ public class TrieField extends PrimitiveFieldType {
     if (sf.multiValued()) {
       switch (type) {
         case INTEGER:
-          return Type.SORTED_SET_INTEGER;
+          return Type.LEGACY_SORTED_SET_INTEGER;
         case LONG:
         case DATE:
-          return Type.SORTED_SET_LONG;
+          return Type.LEGACY_SORTED_SET_LONG;
         case FLOAT:
-          return Type.SORTED_SET_FLOAT;
+          return Type.LEGACY_SORTED_SET_FLOAT;
         case DOUBLE:
           return Type.SORTED_SET_DOUBLE;
         default:

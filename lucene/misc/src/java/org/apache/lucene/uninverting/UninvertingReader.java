@@ -148,28 +148,28 @@ public class UninvertingReader extends FilterLeafReader {
      * Fields with this type act as if they were indexed with
      * {@link SortedSetDocValuesField}.
      */
-    SORTED_SET_INTEGER,
+    LEGACY_SORTED_SET_INTEGER,
     /** 
      * Multi-valued Float, (e.g. indexed with {@link org.apache.lucene.document.LegacyFloatField})
      * <p>
      * Fields with this type act as if they were indexed with
      * {@link SortedSetDocValuesField}.
      */
-    SORTED_SET_FLOAT,
+    LEGACY_SORTED_SET_FLOAT,
     /** 
      * Multi-valued Long, (e.g. indexed with {@link org.apache.lucene.document.LegacyLongField})
      * <p>
      * Fields with this type act as if they were indexed with
      * {@link SortedSetDocValuesField}.
      */
-    SORTED_SET_LONG,
+    LEGACY_SORTED_SET_LONG,
     /** 
      * Multi-valued Double, (e.g. indexed with {@link org.apache.lucene.document.LegacyDoubleField})
      * <p>
      * Fields with this type act as if they were indexed with
      * {@link SortedSetDocValuesField}.
      */
-    SORTED_SET_DOUBLE
+    LEGACY_SORTED_SET_DOUBLE
   }
   
   /**
@@ -249,10 +249,10 @@ public class UninvertingReader extends FilterLeafReader {
               type = DocValuesType.SORTED;
               break;
             case SORTED_SET_BINARY:
-            case SORTED_SET_INTEGER:
-            case SORTED_SET_FLOAT:
-            case SORTED_SET_LONG:
-            case SORTED_SET_DOUBLE:
+            case LEGACY_SORTED_SET_INTEGER:
+            case LEGACY_SORTED_SET_FLOAT:
+            case LEGACY_SORTED_SET_LONG:
+            case LEGACY_SORTED_SET_DOUBLE:
               type = DocValuesType.SORTED_SET;
               break;
             default:
@@ -315,11 +315,11 @@ public class UninvertingReader extends FilterLeafReader {
     Type v = getType(field);
     if (v != null) {
       switch (v) {
-        case SORTED_SET_INTEGER:
-        case SORTED_SET_FLOAT: 
+        case LEGACY_SORTED_SET_INTEGER:
+        case LEGACY_SORTED_SET_FLOAT: 
           return FieldCache.DEFAULT.getDocTermOrds(in, field, FieldCache.INT32_TERM_PREFIX);
-        case SORTED_SET_LONG:
-        case SORTED_SET_DOUBLE:
+        case LEGACY_SORTED_SET_LONG:
+        case LEGACY_SORTED_SET_DOUBLE:
           return FieldCache.DEFAULT.getDocTermOrds(in, field, FieldCache.INT64_TERM_PREFIX);
         case SORTED_SET_BINARY:
           return FieldCache.DEFAULT.getDocTermOrds(in, field, null);
