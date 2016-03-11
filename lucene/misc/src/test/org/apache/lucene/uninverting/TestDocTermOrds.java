@@ -475,7 +475,7 @@ public class TestDocTermOrds extends LuceneTestCase {
     DirectoryReader ir = DirectoryReader.open(dir);
     LeafReader ar = getOnlyLeafReader(ir);
     
-    SortedSetDocValues v = FieldCache.DEFAULT.getDocTermOrds(ar, "foo", FieldCache.INT32_TERM_PREFIX);
+    SortedSetDocValues v = FieldCache.DEFAULT.getDocTermOrds(ar, "foo", FieldCache.LEGACY_INT32_TERM_PREFIX);
     assertEquals(2, v.getValueCount());
     
     v.setDocument(0);
@@ -516,7 +516,7 @@ public class TestDocTermOrds extends LuceneTestCase {
     DirectoryReader ir = DirectoryReader.open(dir);
     LeafReader ar = getOnlyLeafReader(ir);
     
-    SortedSetDocValues v = FieldCache.DEFAULT.getDocTermOrds(ar, "foo", FieldCache.INT64_TERM_PREFIX);
+    SortedSetDocValues v = FieldCache.DEFAULT.getDocTermOrds(ar, "foo", FieldCache.LEGACY_INT64_TERM_PREFIX);
     assertEquals(2, v.getValueCount());
     
     v.setDocument(0);

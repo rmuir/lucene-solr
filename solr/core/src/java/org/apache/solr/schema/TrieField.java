@@ -196,7 +196,7 @@ public class TrieField extends PrimitiveFieldType {
         case FLOAT:
           return Type.LEGACY_SORTED_SET_FLOAT;
         case DOUBLE:
-          return Type.SORTED_SET_DOUBLE;
+          return Type.LEGACY_SORTED_SET_DOUBLE;
         default:
           throw new AssertionError();
       }

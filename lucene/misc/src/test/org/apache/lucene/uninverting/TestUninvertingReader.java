@@ -194,7 +194,7 @@ public class TestUninvertingReader extends LuceneTestCase {
     iw.close();
     
     DirectoryReader ir = UninvertingReader.wrap(DirectoryReader.open(dir), 
-        Collections.singletonMap("foo", Type.SORTED_SET_DOUBLE));
+        Collections.singletonMap("foo", Type.LEGACY_SORTED_SET_DOUBLE));
     LeafReader ar = ir.leaves().get(0).reader();
     SortedSetDocValues v = ar.getSortedSetDocValues("foo");
     assertEquals(2, v.getValueCount());

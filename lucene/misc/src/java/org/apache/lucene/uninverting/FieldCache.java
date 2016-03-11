@@ -102,7 +102,7 @@ interface FieldCache {
    * A parser instance for int values encoded by {@link org.apache.lucene.util.NumericUtils}, e.g. when indexed
    * via {@link org.apache.lucene.document.IntPoint}.
    */
-  public static final Parser INT_POINT_PARSER = new PointParser() {
+  public static final PointParser INT_POINT_PARSER = new PointParser() {
     @Override
     public long parseValue(BytesRef point) {
       return NumericUtils.sortableBytesToInt(point.bytes, point.offset);
@@ -118,7 +118,7 @@ interface FieldCache {
    * A parser instance for long values encoded by {@link org.apache.lucene.util.NumericUtils}, e.g. when indexed
    * via {@link org.apache.lucene.document.LongPoint}.
    */
-  public static final Parser LONG_POINT_PARSER = new PointParser() {
+  public static final PointParser LONG_POINT_PARSER = new PointParser() {
     @Override
     public long parseValue(BytesRef point) {
       return NumericUtils.sortableBytesToLong(point.bytes, point.offset);
@@ -134,7 +134,7 @@ interface FieldCache {
    * A parser instance for float values encoded by {@link org.apache.lucene.util.NumericUtils}, e.g. when indexed
    * via {@link org.apache.lucene.document.FloatPoint}.
    */
-  public static final Parser FLOAT_POINT_PARSER = new PointParser() {
+  public static final PointParser FLOAT_POINT_PARSER = new PointParser() {
     @Override
     public long parseValue(BytesRef point) {
       return NumericUtils.sortableFloatBits(NumericUtils.sortableBytesToInt(point.bytes, point.offset));
@@ -150,7 +150,7 @@ interface FieldCache {
    * A parser instance for double values encoded by {@link org.apache.lucene.util.NumericUtils}, e.g. when indexed
    * via {@link org.apache.lucene.document.DoublePoint}.
    */
-  public static final Parser DOUBLE_POINT_PARSER = new PointParser() {
+  public static final PointParser DOUBLE_POINT_PARSER = new PointParser() {
     @Override
     public long parseValue(BytesRef point) {
       return NumericUtils.sortableDoubleBits(NumericUtils.sortableBytesToLong(point.bytes, point.offset));
@@ -355,10 +355,18 @@ interface FieldCache {
    */
   public SortedNumericDocValues getSortedNumerics(LeafReader reader, String field, PointParser parser, boolean setDocsWithField) throws IOException;
 
-  /** Can be passed to {@link #getDocTermOrds} to filter for 32-bit numeric terms */
-  public static final BytesRef INT32_TERM_PREFIX = new BytesRef(new byte[] { LegacyNumericUtils.SHIFT_START_INT });
-  /** Can be passed to {@link #getDocTermOrds} to filter for 64-bit numeric terms */
-  public static final BytesRef INT64_TERM_PREFIX = new BytesRef(new byte[] { LegacyNumericUtils.SHIFT_START_LONG });
+  /** 
+   * Can be passed to {@link #getDocTermOrds} to filter for 32-bit numeric terms
+   * @deprecated Index with points and use {@link #getSortedNumerics} instead. 
+   */
+  @Deprecated
+  public static final BytesRef LEGACY_INT32_TERM_PREFIX = new BytesRef(new byte[] { LegacyNumericUtils.SHIFT_START_INT });
+  /** 
+   * Can be passed to {@link #getDocTermOrds} to filter for 64-bit numeric terms
+   * @deprecated Index with points and use {@link #getSortedNumerics} instead.  
+   */
+  @Deprecated
+  public static final BytesRef LEGACY_INT64_TERM_PREFIX = new BytesRef(new byte[] { LegacyNumericUtils.SHIFT_START_LONG });
   
   /**
    * Checks the internal cache for an appropriate entry, and if none is found, reads the term values
@@ -368,7 +376,7 @@ interface FieldCache {
    * @param reader  Used to build a {@link DocTermOrds} instance
    * @param field   Which field contains the strings.
    * @param prefix  prefix for a subset of the terms which should be uninverted. Can be null or
-   *                {@link #INT32_TERM_PREFIX} or {@link #INT64_TERM_PREFIX}
+   *                {@link #LEGACY_INT32_TERM_PREFIX} or {@link #LEGACY_INT64_TERM_PREFIX}
    *                
    * @return a {@link DocTermOrds} instance
    * @throws IOException  If any error occurs.
