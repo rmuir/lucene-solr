@@ -429,7 +429,14 @@ class FieldCacheImpl implements FieldCache {
     
     if (parser instanceof PointParser) {
       // points case
-      
+      if (fieldInfo.getPointDimensionCount() == 0) {
+        return new Bits.MatchNoBits(reader.maxDoc());
+      }
+      PointValues values = reader.getPointValues();
+      // no actual points for this field (e.g. all points deleted)
+      if (values == null || values.size(field) == 0) {
+        return new Bits.MatchNoBits(reader.maxDoc());
+      }
     } else {
       // postings case
       if (fieldInfo.getIndexOptions() == IndexOptions.NONE) {
