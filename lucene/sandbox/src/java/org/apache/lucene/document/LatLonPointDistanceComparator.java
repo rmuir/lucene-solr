@@ -30,7 +30,13 @@ import org.apache.lucene.spatial.util.GeoDistanceUtils;
 import org.apache.lucene.spatial.util.GeoRect;
 import org.apache.lucene.spatial.util.GeoUtils;
 
-/** Compares docs by distance from an origin */
+/** 
+ * Compares docs by distance from an origin 
+ * <p>
+ * When the least competitive item on the priority queue changes (setBottom), we recompute
+ * a bounding box representing competitive distance to the top-N. Then in compareBottom, we can
+ * quickly reject hits based on bounding box alone without computing distance for every element.
+ */
 class LatLonPointDistanceComparator extends FieldComparator<Double> implements LeafFieldComparator {
   final String field;
   final double latitude;
@@ -56,7 +62,7 @@ class LatLonPointDistanceComparator extends FieldComparator<Double> implements L
   int minLat2;
   int maxLat2;
 
-  // the number of times setBottom has been called
+  // the number of times setBottom has been called (adversary protection)
   int setBottomCounter = 0;
 
   public LatLonPointDistanceComparator(String field, double latitude, double longitude, int numHits, double missingValue) {
@@ -80,15 +86,17 @@ class LatLonPointDistanceComparator extends FieldComparator<Double> implements L
     bottom = values[slot];
     // make bounding box(es) to exclude non-competitive hits, but start
     // sampling if we get called way too much: don't make gobs of bounding
-    // boxes if comparator hits a worst case adversary (e.g. backwards distance order)
+    // boxes if comparator hits a worst case order (e.g. backwards distance order)
     if (setBottomCounter < 1024 || (setBottomCounter & 0x3F) == 0x3F) {
       GeoRect box = GeoUtils.circleToBBox(longitude, latitude, bottom);
-      // pre-encode our box's bounds, so we don't have to decode in compareBottom unless competitive
+      // pre-encode our box to our integer encoding, so we don't have to decode 
+      // to double values for uncompetitive hits. This has some cost!
       int minLatEncoded = LatLonPoint.encodeLatitude(box.minLat);
       int maxLatEncoded = LatLonPoint.encodeLatitude(box.maxLat);
       int minLonEncoded = LatLonPoint.encodeLongitude(box.minLon);
       int maxLonEncoded = LatLonPoint.encodeLongitude(box.maxLon);
-      // be sure to not introduce quantization error, just round up our encoded box safely in all directions
+      // be sure to not introduce quantization error in our optimization, just 
+      // round up our encoded box safely in all directions.
       if (minLatEncoded != Integer.MIN_VALUE) {
         minLatEncoded--;
       }
