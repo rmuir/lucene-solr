@@ -27,6 +27,8 @@ import org.apache.lucene.search.FieldComparator;
 import org.apache.lucene.search.LeafFieldComparator;
 import org.apache.lucene.search.Scorer;
 import org.apache.lucene.spatial.util.GeoDistanceUtils;
+import org.apache.lucene.spatial.util.GeoRect;
+import org.apache.lucene.spatial.util.GeoUtils;
 
 /** Compares docs by distance from an origin */
 class LatLonPointDistanceComparator extends FieldComparator<Double> implements LeafFieldComparator {
@@ -40,6 +42,13 @@ class LatLonPointDistanceComparator extends FieldComparator<Double> implements L
   double topValue;
   SortedNumericDocValues currentDocs;
   
+  // current bounding box for the bottom distance on the PQ.
+  // used to exclude uncompetitive hits faster.
+  GeoRect box1 = null;
+  GeoRect box2 = null;
+  // the number of times setBottom has been called
+  int setBottomCounter = 0;
+
   public LatLonPointDistanceComparator(String field, double latitude, double longitude, int numHits, double missingValue) {
     this.field = field;
     this.latitude = latitude;
@@ -59,6 +68,21 @@ class LatLonPointDistanceComparator extends FieldComparator<Double> implements L
   @Override
   public void setBottom(int slot) {
     bottom = values[slot];
+    // make bounding box(es) to exclude non-competitive hits, but start
+    // sampling if we get called way too much: don't make gobs of bounding
+    // boxes if comparator hits a worst case adversary (e.g. backwards distance order)
+    if (setBottomCounter < 1024 || (setBottomCounter & 0x3F) == 0x3F) {
+      GeoRect box = GeoUtils.circleToBBox(longitude, latitude, bottom);
+      // crosses dateline: split
+      if (box.crossesDateline()) {
+        box1 = new GeoRect(-180.0, box.maxLon, box.minLat, box.maxLat);
+        box2 = new GeoRect(box.minLon, 180.0, box.minLat, box.maxLat);
+      } else {
+        box1 = box;
+        box2 = null;
+      }
+    }
+    setBottomCounter++;
   }
   
   @Override
@@ -68,7 +92,26 @@ class LatLonPointDistanceComparator extends FieldComparator<Double> implements L
   
   @Override
   public int compareBottom(int doc) throws IOException {
-    return Double.compare(bottom, distance(doc));
+    currentDocs.setDocument(doc);
+
+    int numValues = currentDocs.count();
+    if (numValues == 0) {
+      return Double.compare(bottom, missingValue);
+    }
+
+    double minValue = Double.POSITIVE_INFINITY;
+    for (int i = 0; i < numValues; i++) {
+      long encoded = currentDocs.valueAt(i);
+      double docLatitude = LatLonPoint.decodeLatitude((int)(encoded >> 32));
+      double docLongitude = LatLonPoint.decodeLongitude((int)(encoded & 0xFFFFFFFF));
+      boolean outsideBox = ((docLatitude < box1.minLat || docLongitude < box1.minLon || docLatitude > box1.maxLat || docLongitude > box1.maxLon) &&
+            (box2 == null || docLatitude < box2.minLat || docLongitude < box2.minLon || docLatitude > box2.maxLat || docLongitude > box2.maxLon));
+      // only compute actual distance if its inside "competitive bounding box"
+      if (outsideBox == false) {
+        minValue = Math.min(minValue, GeoDistanceUtils.haversin(latitude, longitude, docLatitude, docLongitude));
+      }
+    }
+    return Double.compare(bottom, minValue);
   }
   
   @Override
