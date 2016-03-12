@@ -42,10 +42,20 @@ class LatLonPointDistanceComparator extends FieldComparator<Double> implements L
   double topValue;
   SortedNumericDocValues currentDocs;
   
-  // current bounding box for the bottom distance on the PQ.
+  // current bounding box(es) for the bottom distance on the PQ.
   // used to exclude uncompetitive hits faster.
-  GeoRect box1 = null;
-  GeoRect box2 = null;
+  int minLon;
+  int maxLon;
+  int minLat;
+  int maxLat;
+  
+  // crossesDateLine is true, then we have a second box to check
+  boolean crossesDateLine;
+  int minLon2;
+  int maxLon2;
+  int minLat2;
+  int maxLat2;
+
   // the number of times setBottom has been called
   int setBottomCounter = 0;
 
@@ -73,13 +83,42 @@ class LatLonPointDistanceComparator extends FieldComparator<Double> implements L
     // boxes if comparator hits a worst case adversary (e.g. backwards distance order)
     if (setBottomCounter < 1024 || (setBottomCounter & 0x3F) == 0x3F) {
       GeoRect box = GeoUtils.circleToBBox(longitude, latitude, bottom);
+      // pre-encode our box's bounds, so we don't have to decode in compareBottom unless competitive
+      int minLatEncoded = LatLonPoint.encodeLatitude(box.minLat);
+      int maxLatEncoded = LatLonPoint.encodeLatitude(box.maxLat);
+      int minLonEncoded = LatLonPoint.encodeLongitude(box.minLon);
+      int maxLonEncoded = LatLonPoint.encodeLongitude(box.maxLon);
+      // be sure to not introduce quantization error, just round up our encoded box safely in all directions
+      if (minLatEncoded != Integer.MIN_VALUE) {
+        minLatEncoded--;
+      }
+      if (minLonEncoded != Integer.MIN_VALUE) {
+        minLonEncoded--;
+      }
+      if (maxLatEncoded != Integer.MAX_VALUE) {
+        maxLatEncoded++;
+      }
+      if (maxLonEncoded != Integer.MAX_VALUE) {
+        maxLonEncoded++;
+      }
+      
+      crossesDateLine = box.crossesDateline();
       // crosses dateline: split
-      if (box.crossesDateline()) {
-        box1 = new GeoRect(-180.0, box.maxLon, box.minLat, box.maxLat);
-        box2 = new GeoRect(box.minLon, 180.0, box.minLat, box.maxLat);
+      if (crossesDateLine) {
+        minLon = Integer.MIN_VALUE;
+        maxLon = maxLonEncoded;
+        minLat = minLatEncoded;
+        maxLat = maxLatEncoded;
+        
+        minLon2 = minLonEncoded;
+        maxLon2 = Integer.MAX_VALUE;
+        minLat2 = minLatEncoded;
+        maxLat2 = maxLatEncoded;
       } else {
-        box1 = box;
-        box2 = null;
+        minLon = minLonEncoded;
+        maxLon = maxLonEncoded;
+        minLat = minLatEncoded;
+        maxLat = maxLatEncoded;
       }
     }
     setBottomCounter++;
@@ -102,12 +141,14 @@ class LatLonPointDistanceComparator extends FieldComparator<Double> implements L
     double minValue = Double.POSITIVE_INFINITY;
     for (int i = 0; i < numValues; i++) {
       long encoded = currentDocs.valueAt(i);
-      double docLatitude = LatLonPoint.decodeLatitude((int)(encoded >> 32));
-      double docLongitude = LatLonPoint.decodeLongitude((int)(encoded & 0xFFFFFFFF));
-      boolean outsideBox = ((docLatitude < box1.minLat || docLongitude < box1.minLon || docLatitude > box1.maxLat || docLongitude > box1.maxLon) &&
-            (box2 == null || docLatitude < box2.minLat || docLongitude < box2.minLon || docLatitude > box2.maxLat || docLongitude > box2.maxLon));
+      int latitudeBits = (int)(encoded >> 32);
+      int longitudeBits = (int)(encoded & 0xFFFFFFFF);
+      boolean outsideBox = ((latitudeBits < minLat || longitudeBits < minLon || latitudeBits > maxLat || longitudeBits > maxLon) &&
+            (crossesDateLine == false || latitudeBits < minLat2 || longitudeBits < minLon2 || latitudeBits > maxLat2 || longitudeBits > maxLon2));
       // only compute actual distance if its inside "competitive bounding box"
       if (outsideBox == false) {
+        double docLatitude = LatLonPoint.decodeLatitude(latitudeBits);
+        double docLongitude = LatLonPoint.decodeLongitude(longitudeBits);
         minValue = Math.min(minValue, GeoDistanceUtils.haversin(latitude, longitude, docLatitude, docLongitude));
       }
     }
