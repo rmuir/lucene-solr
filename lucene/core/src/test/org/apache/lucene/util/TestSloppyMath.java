@@ -73,7 +73,7 @@ public class TestSloppyMath extends LuceneTestCase {
     assertEquals(Math.PI/3, asin(0.8660254), ASIN_DELTA);
     assertEquals(Math.PI/2, asin(1), ASIN_DELTA);
     // only values -1..1 are useful
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 100000; i++) {
       double d = random().nextDouble();
       if (random().nextBoolean()) {
         d = -d;
