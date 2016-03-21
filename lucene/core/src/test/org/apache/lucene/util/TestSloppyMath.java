@@ -31,7 +31,7 @@ public class TestSloppyMath extends LuceneTestCase {
   // accuracy for asin()
   static double ASIN_DELTA = 1E-7;
   // accuracy for haversinMeters()
-  static double HAVERSIN_DELTA = 1E-5;
+  static double HAVERSIN_DELTA = 1E-3;
   
   public void testCos() {
     assertTrue(Double.isNaN(cos(Double.NaN)));

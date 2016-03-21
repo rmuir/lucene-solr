@@ -150,7 +150,7 @@ public class SloppyMath {
     if (a <= ASIN_MAX_VALUE_FOR_TABS) {
       int index = (int)(a * ASIN_INDEXER + 0.5);
       double delta = a - index * ASIN_DELTA;
-      double result = asinTab[index] + delta * (asinDer1DivF1Tab[index] + delta * (asinDer2DivF2Tab[index] + delta * (asinDer3DivF3Tab[index])));
+      double result = asinTab[index] + delta * (asinDer1DivF1Tab[index] + delta * (asinDer2DivF2Tab[index]));
       return negateResult ? -result : result;
     } else { // value > ASIN_MAX_VALUE_FOR_TABS, or value is NaN
       // This part is derived from fdlibm.
@@ -211,7 +211,6 @@ public class SloppyMath {
   private static final double[] asinTab = new double[ASIN_TABS_SIZE];
   private static final double[] asinDer1DivF1Tab = new double[ASIN_TABS_SIZE];
   private static final double[] asinDer2DivF2Tab = new double[ASIN_TABS_SIZE];
-  private static final double[] asinDer3DivF3Tab = new double[ASIN_TABS_SIZE];
   
   private static final double ASIN_PIO2_HI = Double.longBitsToDouble(0x3FF921FB54442D18L); // 1.57079632679489655800e+00
   private static final double ASIN_PIO2_LO = Double.longBitsToDouble(0x3C91A62633145C07L); // 6.12323399573676603587e-17
@@ -261,10 +260,8 @@ public class SloppyMath {
       double oneMinusXSqInv = 1.0/(1-x*x);
       double oneMinusXSqInv0_5 = StrictMath.sqrt(oneMinusXSqInv);
       double oneMinusXSqInv1_5 = oneMinusXSqInv0_5*oneMinusXSqInv;
-      double oneMinusXSqInv2_5 = oneMinusXSqInv1_5*oneMinusXSqInv;
       asinDer1DivF1Tab[i] = oneMinusXSqInv0_5;
       asinDer2DivF2Tab[i] = (x*oneMinusXSqInv1_5) * ONE_DIV_F2;
-      asinDer3DivF3Tab[i] = ((1+2*x*x)*oneMinusXSqInv2_5) * ONE_DIV_F3;
     }
   }
 }
