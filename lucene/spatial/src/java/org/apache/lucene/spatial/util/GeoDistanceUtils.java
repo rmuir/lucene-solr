@@ -58,7 +58,7 @@ public class GeoDistanceUtils {
     lat = StrictMath.toRadians(lat);
 
     // get the diameter at the latitude
-    final double diameter = 2 * GeoProjectionUtils.SEMIMAJOR_AXIS;
+    final double diameter = 2 * GeoUtils.SEMIMAJOR_AXIS;
 
     // compute inverse haversine
     double a = StrictMath.sin(distance/diameter);
@@ -125,7 +125,7 @@ public class GeoDistanceUtils {
    */
   public static double distanceToDegreesLat(double lat, double distance) {
     // get the diameter at the latitude
-    final double diameter = 2 * GeoProjectionUtils.SEMIMAJOR_AXIS;
+    final double diameter = 2 * GeoUtils.SEMIMAJOR_AXIS;
 
     // compute inverse haversine
     double a = StrictMath.sin(distance/diameter);
