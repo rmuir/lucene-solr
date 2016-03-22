@@ -173,7 +173,7 @@ public final class GeoUtils {
    * @see Math#sin(double)
    */
   // TODO: deprecate/remove this? at least its no longer public.
-  static double sloppySin(double a) {
+  private static double sloppySin(double a) {
     return cos(a - PIO2);
   }
 

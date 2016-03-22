@@ -18,16 +18,12 @@ package org.apache.lucene.spatial.util;
 
 import org.apache.lucene.util.SloppyMath;
 
-import static org.apache.lucene.util.SloppyMath.TO_RADIANS;
-
 /**
  * Reusable geo-spatial distance utility methods.
  *
  * @lucene.experimental
  */
 public class GeoDistanceUtils {
-  /** error threshold for point-distance queries (in percent) NOTE: Guideline from USGS is 0.005 **/
-  public static final double DISTANCE_PCT_ERR = 0.005;
 
   // No instance:
   private GeoDistanceUtils() {
