@@ -28,7 +28,7 @@ import org.apache.lucene.util.SloppyMath;
 final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
   private final GeoPointDistanceQuery distanceQuery;
   private final double centerLon;
-
+  
   GeoPointDistanceQueryImpl(final String field, final TermEncoding termEncoding, final GeoPointDistanceQuery q,
                             final double centerLonUnwrapped, final GeoRect bbox) {
     super(field, termEncoding, bbox.minLat, bbox.maxLat, bbox.minLon, bbox.maxLon);
@@ -65,8 +65,7 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
 
     @Override
     protected boolean cellWithin(final double minLat, final double maxLat, final double minLon, final double maxLon) {
-      // TODO: we call cellCrosses because of how the termsEnum logic works, helps us avoid some haversin() calls here.
-      if (cellCrosses(minLat, maxLat, minLon, maxLon) && maxLon - centerLon < 90 && centerLon - minLon < 90 &&
+      if (maxLon - centerLon < 90 && centerLon - minLon < 90 &&
           SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, minLat, minLon) <= distanceQuery.radiusMeters &&
           SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, minLat, maxLon) <= distanceQuery.radiusMeters &&
           SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, maxLat, minLon) <= distanceQuery.radiusMeters &&
@@ -90,6 +89,9 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
      */
     @Override
     protected boolean postFilter(final double lat, final double lon) {
+      if (lat < minLat || lat > maxLat || lon < minLon || lon > maxLon) {
+        return false;
+      }
       return SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, lat, lon) <= distanceQuery.radiusMeters;
     }
   }
