@@ -29,11 +29,23 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
   private final GeoPointDistanceQuery distanceQuery;
   private final double centerLon;
   
+  // optimization, maximum partial haversin needed to be a candidate
+  private final double maxPartialDistance;
+  
   GeoPointDistanceQueryImpl(final String field, final TermEncoding termEncoding, final GeoPointDistanceQuery q,
                             final double centerLonUnwrapped, final GeoRect bbox) {
     super(field, termEncoding, bbox.minLat, bbox.maxLat, bbox.minLon, bbox.maxLon);
     distanceQuery = q;
     centerLon = centerLonUnwrapped;
+
+    // unless our box is crazy, we can use this bound
+    // to reject edge cases faster in postFilter()
+    if (bbox.maxLon - centerLon < 90 && centerLon - bbox.minLon < 90) {
+      maxPartialDistance = Math.max(SloppyMath.haversinSortKey(distanceQuery.centerLat, centerLon, distanceQuery.centerLat, bbox.maxLon),
+                                    SloppyMath.haversinSortKey(distanceQuery.centerLat, centerLon, bbox.maxLat, centerLon));
+    } else {
+      maxPartialDistance = Double.POSITIVE_INFINITY;
+    }
   }
 
   @Override
@@ -89,10 +101,19 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
      */
     @Override
     protected boolean postFilter(final double lat, final double lon) {
+      // check bbox
       if (lat < minLat || lat > maxLat || lon < minLon || lon > maxLon) {
         return false;
       }
-      return SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, lat, lon) <= distanceQuery.radiusMeters;
+
+      // first check the partial distance, if its more than that, it can't be <= radiusMeters
+      double h1 = SloppyMath.haversinSortKey(distanceQuery.centerLat, centerLon, lat, lon);
+      if (h1 > maxPartialDistance) {
+        return false;
+      }
+
+      // fully confirm with part 2:
+      return SloppyMath.haversinMeters(h1) <= distanceQuery.radiusMeters;
     }
   }
 
