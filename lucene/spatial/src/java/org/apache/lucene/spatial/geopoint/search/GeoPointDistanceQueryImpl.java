@@ -19,6 +19,7 @@ package org.apache.lucene.spatial.geopoint.search;
 import org.apache.lucene.search.MultiTermQuery;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField.TermEncoding;
 import org.apache.lucene.spatial.util.GeoRect;
+import org.apache.lucene.spatial.util.GeoUtils;
 import org.apache.lucene.util.SloppyMath;
 
 /** Package private implementation for the public facing GeoPointDistanceQuery delegate class.
@@ -31,6 +32,8 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
   
   // optimization, maximum partial haversin needed to be a candidate
   private final double maxPartialDistance;
+  // optimization, used for circle-rectangle intersection
+  private final GeoRect bbox;
   
   GeoPointDistanceQueryImpl(final String field, final TermEncoding termEncoding, final GeoPointDistanceQuery q,
                             final double centerLonUnwrapped, final GeoRect bbox) {
@@ -46,6 +49,7 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
     } else {
       maxPartialDistance = Double.POSITIVE_INFINITY;
     }
+    this.bbox = bbox;
   }
 
   @Override
@@ -71,6 +75,12 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
           minLon > GeoPointDistanceQueryImpl.this.maxLon) {
         return false;
       } else {
+        if (maxLon - centerLon < 90 && centerLon - minLon < 90 && /* box is not wrapping around the world */
+            bbox.maxLon - bbox.minLon < 90 && /* circle is not wrapping around the world */
+            bbox.minLon > GeoUtils.MIN_LON_INCL && bbox.maxLon < GeoUtils.MAX_LON_INCL && /* or already crossed dateline! */
+            intersects(distanceQuery.centerLat, distanceQuery.centerLon, distanceQuery.radiusMeters, minLat, maxLat, minLon, maxLon) == false) {
+          return false;
+        }
         return true;
       }
     }
@@ -115,6 +125,16 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
       // fully confirm with part 2:
       return SloppyMath.haversinMeters(h1) <= distanceQuery.radiusMeters;
     }
+  }
+  
+  static boolean intersects(double centerLat, double centerLon, double radius, double latMin, double latMax, double lonMin, double lonMax) {
+    if ((centerLat >= latMin && centerLat <= latMax) || (centerLon >= lonMin && centerLon <= lonMax)) {
+      // e.g. circle itself fully inside
+      return true;
+    }
+    double closestLat = Math.max(latMin, Math.min(centerLat, latMax));
+    double closestLon = Math.max(lonMin, Math.min(centerLon, lonMax));
+    return SloppyMath.haversinMeters(centerLat, centerLon, closestLat, closestLon) <= radius;
   }
 
   @Override

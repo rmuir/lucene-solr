@@ -19,8 +19,11 @@ package org.apache.lucene.document;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.RandomIndexWriter;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.spatial.util.GeoRect;
+import org.apache.lucene.spatial.util.GeoUtils;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.LuceneTestCase;
+import org.apache.lucene.util.SloppyMath;
 
 /** Simple tests for {@link LatLonPoint#newDistanceQuery} */
 public class TestLatLonPointDistanceQuery extends LuceneTestCase {
@@ -78,5 +81,72 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
     });
     assertTrue(expected.getMessage().contains("radiusMeters"));
     assertTrue(expected.getMessage().contains("is invalid"));
+  }
+  
+  public void testCircleOpto() throws Exception {
+    for (int i = 0; i < 1000000; i++) {
+      // circle
+      double centerLat = -90 + 180.0 * random().nextDouble();
+      double centerLon = -180 + 360.0 * random().nextDouble();
+      double radius = 50_000_000D * random().nextDouble();
+      
+      // box
+      double latMin = -90 + 180.0 * random().nextDouble();
+      double latMax = -90 + 180.0 * random().nextDouble();
+      double lonMin = -180 + 360.0 * random().nextDouble();
+      double lonMax = -180 + 360.0 * random().nextDouble();
+
+      if (latMax < latMin) {
+        double tmp = latMin;
+        latMin = latMax;
+        latMax = tmp;
+      }
+
+      if (lonMax < lonMin) {
+        double tmp = lonMin;
+        lonMin = lonMax;
+        lonMax = tmp;
+      }
+
+      if (intersects(centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax) == false) {
+        // intersects says false: test a ton of points
+        for (int j = 0; j < 100; j++) {
+          double lat = latMin + (latMax - latMin) * random().nextDouble();
+          double lon = lonMin + (lonMax - lonMin) * random().nextDouble();
+          double distance = SloppyMath.haversinMeters(centerLat, centerLon, lat, lon);
+          assertTrue(String.format("\nintersects(\n" +
+                                   "centerLat=%s\n" +
+                                   "centerLon=%s\n" +
+                                   "radius=%s\n" +
+                                   "latMin=%s\n" +
+                                   "latMax=%s\n" +
+                                   "lonMin=%s\n" + 
+                                   "lonMax=%s) == false BUT\n" +
+                                   "haversin(%s, %s, %s, %s) = %s\nbbox=%s", 
+                                    centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax, 
+                                    centerLat, centerLon, lat, lon, distance, GeoUtils.circleToBBox(centerLat, centerLon, radius)),
+                     distance > radius);
+        }
+      }
+    }
+  }
+  
+  static boolean intersects(double centerLat, double centerLon, double radius, double latMin, double latMax, double lonMin, double lonMax) {
+    GeoRect box = GeoUtils.circleToBBox(centerLat, centerLon, radius);
+    if (lonMax - centerLon < 90 && centerLon - lonMin < 90 && /* box is not wrapping around the world */
+        box.maxLon - box.minLon < 90 && /* circle is not wrapping around the world */
+        box.crossesDateline() == false) /* or crossing dateline! */ {
+      // ok
+    } else {
+      return true;
+    }
+
+    if ((centerLat >= latMin && centerLat <= latMax) || (centerLon >= lonMin && centerLon <= lonMax)) {
+      // e.g. circle itself fully inside
+      return true;
+    }
+    double closestLat = Math.max(latMin, Math.min(centerLat, latMax));
+    double closestLon = Math.max(lonMin, Math.min(centerLon, lonMax));
+    return SloppyMath.haversinMeters(centerLat, centerLon, closestLat, closestLon) <= radius;
   }
 }

@@ -205,6 +205,12 @@ final class LatLonPointDistanceQuery extends Query {
                                // we are fully enclosed, collect everything within this subtree
                                return Relation.CELL_INSIDE_QUERY;
                              } else {
+                               if (lonMax - longitude < 90 && longitude - lonMin < 90 && /* box is not wrapping around the world */
+                                   box.maxLon - box.minLon < 90 && /* circle is not wrapping around the world */
+                                   box.crossesDateline() == false && /* or crossing dateline! */
+                                   intersects(latitude, longitude, radiusMeters, latMin, latMax, lonMin, lonMax) == false) {
+                                 return Relation.CELL_OUTSIDE_QUERY;
+                               }
                                // recurse: its inside our bounding box(es), but not fully, or it wraps around.
                                return Relation.CELL_CROSSES_QUERY;
                              }
@@ -316,5 +322,15 @@ final class LatLonPointDistanceQuery extends Query {
     sb.append(radiusMeters);
     sb.append(" meters");
     return sb.toString();
+  }
+
+  static boolean intersects(double centerLat, double centerLon, double radius, double latMin, double latMax, double lonMin, double lonMax) {
+    if ((centerLat >= latMin && centerLat <= latMax) || (centerLon >= lonMin && centerLon <= lonMax)) {
+      // e.g. circle itself fully inside
+      return true;
+    }
+    double closestLat = Math.max(latMin, Math.min(centerLat, latMax));
+    double closestLon = Math.max(lonMin, Math.min(centerLon, lonMax));
+    return SloppyMath.haversinMeters(centerLat, centerLon, closestLat, closestLon) <= radius;
   }
 }
