@@ -90,23 +90,31 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
       double centerLon = -180 + 360.0 * random().nextDouble();
       double radius = 50_000_000D * random().nextDouble();
       
-      // box
-      double latMin = -90 + 180.0 * random().nextDouble();
-      double latMax = -90 + 180.0 * random().nextDouble();
-      double lonMin = -180 + 360.0 * random().nextDouble();
-      double lonMax = -180 + 360.0 * random().nextDouble();
-
-      if (latMax < latMin) {
-        double tmp = latMin;
-        latMin = latMax;
-        latMax = tmp;
+      GeoRect box = GeoUtils.circleToBBox(centerLat, centerLon, radius);
+      if (box.crossesDateline()) {
+        continue; // hack
       }
 
-      if (lonMax < lonMin) {
-        double tmp = lonMin;
-        lonMin = lonMax;
-        lonMax = tmp;
-      }
+      double boxLatMin = 90 + box.minLat;
+      double boxLatMax = 90 + box.maxLat;
+      double boxLonMin = 180 + box.minLon;
+      double boxLonMax = 180 + box.maxLon;
+
+      // rectangle, computed to at least cross the bounding box of circle in some way
+      double latMin = (180.0 - boxLatMax) * random().nextDouble();
+      double b = Math.max(latMin, boxLatMin);
+      double latMax = b + (180.0 - b) * random().nextDouble();
+      double lonMin = (360.0 - boxLonMax) * random().nextDouble();
+      double c = Math.max(lonMin, boxLonMin);
+      double lonMax = c + (360.0 - c) * random().nextDouble();
+
+      latMin -= 90;
+      latMax -= 90;
+      lonMin -= 180;
+      lonMax -= 180;
+
+      assert latMax >= latMin;
+      assert lonMax >= lonMin;
 
       if (intersects(centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax) == false) {
         // intersects says false: test a ton of points
