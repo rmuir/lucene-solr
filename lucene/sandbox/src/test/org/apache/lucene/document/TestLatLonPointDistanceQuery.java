@@ -110,9 +110,23 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
 
       if (intersects(centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax) == false) {
         // intersects says false: test a ton of points
-        for (int j = 0; j < 100; j++) {
+        for (int j = 0; j < 200; j++) {
           double lat = latMin + (latMax - latMin) * random().nextDouble();
           double lon = lonMin + (lonMax - lonMin) * random().nextDouble();
+          
+          if (random().nextBoolean()) {
+            // explicitly test an edge
+            int edge = random().nextInt(4);
+            if (edge == 0) {
+              lat = latMin;
+            } else if (edge == 1) {
+              lat = latMax;
+            } else if (edge == 2) {
+              lon = lonMin;
+            } else if (edge == 3) {
+              lon = lonMax;
+            }
+          }
           double distance = SloppyMath.haversinMeters(centerLat, centerLon, lat, lon);
           assertTrue(String.format("\nintersects(\n" +
                                    "centerLat=%s\n" +
