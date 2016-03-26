@@ -1215,7 +1215,7 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
 
   private static void plotLatApproximatelyOnEarthSurface(String name, double lat, double minLon, double maxLon) {
     System.out.println("        var " + name + " = WE.polygon([");
-    for(double lon = minLon;lon<=maxLon;lon += (maxLon-minLon)/10) {
+    for(double lon = 0.0;lon<=360.0;lon += 10.0) {
       System.out.println("          [" + lat + ", " + lon + "],");
     }
     System.out.println("          // close the poly");
@@ -1249,8 +1249,8 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
     System.out.println("        WE.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{");
     System.out.println("          attribution: '© OpenStreetMap contributors'");
     System.out.println("        }).addTo(earth);");
-    plotLatApproximatelyOnEarthSurface("lat0", 4.68, rectMinLongitude, rectMaxLongitude);
-    plotLatApproximatelyOnEarthSurface("lat1", 180-93.09, rectMinLongitude, rectMaxLongitude);
+    plotLatApproximatelyOnEarthSurface("lat0", 4.68, box.minLon, box.maxLon);
+    plotLatApproximatelyOnEarthSurface("lat1", 180-93.09, box.minLon, box.maxLon);
     System.out.println("      }");
     System.out.println("    </script>");
     System.out.println("    <style>");
