@@ -162,7 +162,14 @@ public final class GeoUtils {
     double radDistance = radiusMeters / GeoUtils.SEMIMAJOR_AXIS;
     double deltaLon = asin(sloppySin(radDistance) / cos(radLat));
     double latAngle = asin(sloppySin(radLat) * sloppySin(deltaLon) / sloppySin(radDistance));
-    double axisLat = 2D * atan( tan( 0.5D * (radLat - radDistance)) * sloppySin( 0.5D * (latAngle - deltaLon)) / sloppySin( 0.5D * (latAngle + deltaLon)));
-    return TO_DEGREES * axisLat;
+    double axisLat1 = 2D * atan( tan( 0.5D * (radLat - radDistance)) * sloppySin( 0.5D * (latAngle - deltaLon)) / sloppySin( 0.5D * (latAngle + deltaLon)));
+    double axisLat2 = 2D * atan( tan( 0.5D * (radLat + radDistance)) * cos( 0.5D * (latAngle - deltaLon)) / cos( 0.5D * (latAngle + deltaLon)));
+    /* some logic here for when to use axisLat1...
+    if (something) {
+      return TO_DEGREES * axisLat1;
+    }*/
+    double axisLat1Deg = TO_DEGREES * axisLat1;
+    double axisLat2Deg = TO_DEGREES * axisLat2;
+    return TO_DEGREES * axisLat2;
   }
 }

@@ -89,7 +89,7 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
     assertTrue(expected.getMessage().contains("is invalid"));
   }
 
-  @Repeat(iterations = 100)
+  //@Repeat(iterations = 100)
   public void testCircleOpto() throws Exception {
     for (int i = 0; i < 1000; i++) {
       // circle
@@ -122,7 +122,7 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
         assert latMax >= latMin;
         assert lonMax >= lonMin;
 
-        if (intersects(centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax) == false) {
+        if (isDisjoint(centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax)) {
           // intersects says false: test a ton of points
           for (int j = 0; j < 200; j++) {
             double lat = latMin + (latMax - latMin) * random().nextDouble();
@@ -142,7 +142,7 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
               }
             }
             double distance = SloppyMath.haversinMeters(centerLat, centerLon, lat, lon);
-            assertTrue(String.format("\nintersects(\n" +
+            assertTrue(String.format("\nisDisjoint(\n" +
                     "centerLat=%s\n" +
                     "centerLon=%s\n" +
                     "radius=%s\n" +
@@ -166,15 +166,15 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
 
   public void testFailure() throws Exception {
     // circle
-    double centerLat = 33.446926576806234d;
-    double centerLon = -18.702673123352326d;
-    double radius = 3672421.3834118056;
+    double centerLat = 42.07639048470125d;
+    double centerLon = 107.07274153895605d;
+    double radius = 2975340.785331476;
 
     // box
-    double latMin = 34.36653373591446;
-    double latMax = 69.9501119915648;
-    double lonMin = 21.57567258590899;
-    double lonMax = 24.932828252405756;
+    double latMin = 20.349435726973987;
+    double latMax = 75.6212078954794;
+    double lonMin = 72.85917553486915;
+    double lonMax = 77.19077779277924;
     if (isDisjoint(centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax)) {
       // intersects says false: test a ton of points
       for (int j = 0; j < 100; j++) {
