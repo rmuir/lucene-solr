@@ -16,11 +16,15 @@
  */
 package org.apache.lucene.spatial.util;
 
+import org.apache.lucene.util.SloppyMath;
+
+import static java.lang.Math.atan;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.PI;
 import static java.lang.Math.abs;
 
+import static java.lang.Math.tan;
 import static org.apache.lucene.util.SloppyMath.asin;
 import static org.apache.lucene.util.SloppyMath.cos;
 import static org.apache.lucene.util.SloppyMath.TO_DEGREES;
@@ -153,4 +157,12 @@ public final class GeoUtils {
     return cos(a - PIO2);
   }
 
+  public static double axisLat(double centerLat, double radiusMeters) {
+    final double radLat = TO_RADIANS * centerLat;
+    double radDistance = radiusMeters / GeoUtils.SEMIMAJOR_AXIS;
+    double deltaLon = asin(sloppySin(radDistance) / cos(radLat));
+    double latAngle = asin(sloppySin(radLat) * sloppySin(deltaLon) / sloppySin(radDistance));
+    double axisLat = 2D * atan( tan( 0.5D * (radLat - radDistance)) * sloppySin( 0.5D * (latAngle - deltaLon)) / sloppySin( 0.5D * (latAngle + deltaLon)));
+    return TO_DEGREES * axisLat;
+  }
 }
