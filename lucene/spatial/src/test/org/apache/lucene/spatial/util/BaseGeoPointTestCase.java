@@ -1213,14 +1213,33 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
                  2975340.785331476);
   }
 
-  private static void plotLatApproximatelyOnEarthSurface(String name, double lat, double minLon, double maxLon) {
+  private static void plotLatApproximatelyOnEarthSurface(String name, String color, double lat, double minLon, double maxLon) {
     System.out.println("        var " + name + " = WE.polygon([");
-    for(double lon = 0.0;lon<=360.0;lon += 10.0) {
+    double lon;
+    for(lon = minLon;lon<=maxLon;lon += (maxLon-minLon)/36) {
       System.out.println("          [" + lat + ", " + lon + "],");
     }
-    System.out.println("          // close the poly");
-    System.out.println("          [" + lat + ", 0.0]");
-    System.out.println("        ], {color: \"#ffffff\", fillColor: \"#ffffff\", opacity: 0.3, fillOpacity: 0.0001});");
+    System.out.println("          [" + lat + ", " + maxLon + "],");
+    lon -= (maxLon-minLon)/36;
+    for(;lon>=minLon;lon -= (maxLon-minLon)/36) {
+      System.out.println("          [" + lat + ", " + lon + "],");
+    }
+    System.out.println("        ], {color: \"" + color + "\", fillColor: \"#ffffff\", opacity: " + (color.equals("#ffffff") ? "0.3" : "1") + ", fillOpacity: 0.0001});");
+    System.out.println("        " + name + ".addTo(earth);");
+  }
+
+  private static void plotLonApproximatelyOnEarthSurface(String name, String color, double lon, double minLat, double maxLat) {
+    System.out.println("        var " + name + " = WE.polygon([");
+    double lat;
+    for(lat = minLat;lat<=maxLat;lat += (maxLat-minLat)/36) {
+      System.out.println("          [" + lat + ", " + lon + "],");
+    }
+    System.out.println("          [" + maxLat + ", " + lon + "],");
+    lat -= (maxLat-minLat)/36;
+    for(;lat>=minLat;lat -= (maxLat-minLat)/36) {
+      System.out.println("          [" + lat + ", " + lon + "],");
+    }
+    System.out.println("        ], {color: \"" + color + "\", fillColor: \"#ffffff\", opacity: " + (color.equals("#ffffff") ? "0.3" : "1") + ", fillOpacity: 0.0001});");
     System.out.println("        " + name + ".addTo(earth);");
   }
 
@@ -1249,8 +1268,10 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
     System.out.println("        WE.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{");
     System.out.println("          attribution: '© OpenStreetMap contributors'");
     System.out.println("        }).addTo(earth);");
-    plotLatApproximatelyOnEarthSurface("lat0", 4.68, box.minLon, box.maxLon);
-    plotLatApproximatelyOnEarthSurface("lat1", 180-93.09, box.minLon, box.maxLon);
+    plotLatApproximatelyOnEarthSurface("lat0", "#ffffff", 4.68, 0.0, 360.0);
+    plotLatApproximatelyOnEarthSurface("lat1", "#ffffff", 180-93.09, 0.0, 360.0);
+    plotLatApproximatelyOnEarthSurface("axisLat", "#00ff00", GeoUtils.axisLat(centerLatitude, radiusMeters), box.minLon, box.maxLon);
+    plotLonApproximatelyOnEarthSurface("axisLon", "#00ff00", centerLongitude, box.minLat, box.maxLat);
     System.out.println("      }");
     System.out.println("    </script>");
     System.out.println("    <style>");
