@@ -1220,7 +1220,7 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
     }
     System.out.println("          // close the poly");
     System.out.println("          [" + lat + ", 0.0]");
-    System.out.println("        ], {color: \"#aaaaaa\"});");
+    System.out.println("        ], {color: \"#ffffff\", fillColor: \"#ffffff\", opacity: 0.3, fillOpacity: 0.0001});");
     System.out.println("        " + name + ".addTo(earth);");
   }
 
