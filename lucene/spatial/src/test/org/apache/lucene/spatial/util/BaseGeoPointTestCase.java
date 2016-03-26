@@ -1225,7 +1225,7 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
   }
 
   // http://www.webglearth.org has API details:
-  private static void toWebGLEarth(double rectMinLatitude, double rectMaxLatitude,
+  public static void toWebGLEarth(double rectMinLatitude, double rectMaxLatitude,
                                    double rectMinLongitude, double rectMaxLongitude,
                                    double centerLatitude, double centerLongitude,
                                    double radiusMeters) {

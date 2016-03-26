@@ -20,6 +20,7 @@ import com.carrotsearch.randomizedtesting.annotations.Repeat;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.RandomIndexWriter;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.spatial.util.BaseGeoPointTestCase;
 import org.apache.lucene.spatial.util.GeoRect;
 import org.apache.lucene.spatial.util.GeoUtils;
 import org.apache.lucene.store.Directory;
@@ -166,24 +167,24 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
 
   public void testFailure() throws Exception {
     // circle
-    double centerLat = 42.07639048470125d;
-    double centerLon = 107.07274153895605d;
-    double radius = 2975340.785331476;
+    double centerLat = -5.846698483550725d;
+    double centerLon = -49.61814801966855d;
+    double radius = 614452.7269240196;
 
     // box
-    double latMin = 20.349435726973987;
-    double latMax = 75.6212078954794;
-    double lonMin = 72.85917553486915;
-    double lonMax = 77.19077779277924;
+    double latMin = -69.29803962492491;
+    double latMax = -0.5234650208875147;
+    double lonMin = -44.98696317676977;
+    double lonMax = -44.65575890072137;
     if (isDisjoint(centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax)) {
       // intersects says false: test a ton of points
       for (int j = 0; j < 100; j++) {
         double lat = latMin + (latMax - latMin) * random().nextDouble();
         double lon = lonMin + (lonMax - lonMin) * random().nextDouble();
         double distance = SloppyMath.haversinMeters(centerLat, centerLon, lat, lon);
-        /*if (distance <= radius) {
-          toWebGLEarth(latMin, latMax, lonMin, lonMax, centerLat, centerLon, radius);
-        }*/
+        if (distance <= radius) {
+          BaseGeoPointTestCase.toWebGLEarth(latMin, latMax, lonMin, lonMax, centerLat, centerLon, radius);
+        }
         assertTrue(String.format("\nisDisjoint(\n" +
                 "centerLat=%s\n" +
                 "centerLon=%s\n" +
@@ -298,6 +299,5 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
   static boolean pointInCircle(double centerLat, double centerLon, double radius, double lat, double lon) {
     return SloppyMath.haversinMeters(centerLat, centerLon, lat, lon) <= radius;
   }
-
 
 }

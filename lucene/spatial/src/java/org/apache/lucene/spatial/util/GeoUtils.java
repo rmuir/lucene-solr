@@ -158,16 +158,28 @@ public final class GeoUtils {
   }
 
   public static double axisLat(double centerLat, double radiusMeters) {
-    final double radLat = TO_RADIANS * centerLat;
-    double radDistance = radiusMeters / GeoUtils.SEMIMAJOR_AXIS;
-    double deltaLon = asin(sloppySin(radDistance) / cos(radLat));
-    double latAngle = asin(sloppySin(radLat) * sloppySin(deltaLon) / sloppySin(radDistance));
-    double axisLat1 = 2D * atan( tan( 0.5D * (radLat - radDistance)) * sloppySin( 0.5D * (latAngle - deltaLon)) / sloppySin( 0.5D * (latAngle + deltaLon)));
-    double axisLat2 = 2D * atan( tan( 0.5D * (radLat + radDistance)) * cos( 0.5D * (latAngle - deltaLon)) / cos( 0.5D * (latAngle + deltaLon)));
+    // spherical triangle with:
+    // A is angle between longitudes at the north pole
+    // a is the radius of the circle in radians
+    // b is the latitude of the circle center (ie the distance from the north pole to the circle center)
+    // B is the angle between the circle radius and the axis latitude
+    // c is the latitude of the axis (ie the distance from the north pole to the intersection of the radius and bbox longitude)
+    final double radLat = TO_RADIANS * centerLat; // b
+    double radDistance = radiusMeters / GeoUtils.SEMIMAJOR_AXIS; // a
+    double deltaLon = asin(sloppySin(radDistance) / cos(radLat)); // A
+    // solve for B, using sine rule of spherical trig:  sin b * sin A / sin a = sin B
+    double latAngle = asin(sloppySin(radLat) * sloppySin(deltaLon) / sloppySin(radDistance)); // B
+    // napier's analogies, solve for the final side c:
+    // 2 equations, the may produce the same result:
+    // sin (0.5 * (A - B)) / sin (0.5 * (A + B)) = tan (0.5 * (a - b)) / tan (0.5 * c)
+    // cos (0.5 * (A - B)) / cos (0.5 * (A + B)) = tan (0.5 * (a + b)) / tan (0.5 * c)
+    double axisLat1 = 2D * atan( tan( 0.5D * (radDistance - radLat)) * sloppySin( 0.5D * (deltaLon + latAngle)) / sloppySin( 0.5D * (deltaLon - latAngle)));
+    double axisLat2 = 2D * atan( tan( 0.5D * (radDistance + radLat)) * cos( 0.5D * (deltaLon + latAngle)) / cos( 0.5D * (deltaLon - latAngle)));
     /* some logic here for when to use axisLat1...
-    if (something) {
+    if () {
       return TO_DEGREES * axisLat1;
-    }*/
+    }
+    */
     double axisLat1Deg = TO_DEGREES * axisLat1;
     double axisLat2Deg = TO_DEGREES * axisLat2;
     return TO_DEGREES * axisLat2;
