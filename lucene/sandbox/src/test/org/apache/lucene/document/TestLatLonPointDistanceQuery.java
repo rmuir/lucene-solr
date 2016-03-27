@@ -123,7 +123,7 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
         assert latMax >= latMin;
         assert lonMax >= lonMin;
 
-        if (isDisjoint(centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax)) {
+        if (isDisjointAccordingToRob(centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax)) {
           // intersects says false: test a ton of points
           for (int j = 0; j < 200; j++) {
             double lat = latMin + (latMax - latMin) * random().nextDouble();
@@ -143,6 +143,7 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
               }
             }
             double distance = SloppyMath.haversinMeters(centerLat, centerLon, lat, lon);
+            try {
             assertTrue(String.format("\nisDisjoint(\n" +
                     "centerLat=%s\n" +
                     "centerLon=%s\n" +
@@ -155,6 +156,10 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
                 centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax,
                 centerLat, centerLon, lat, lon, distance, GeoUtils.circleToBBox(centerLat, centerLon, radius)),
                 distance > radius);
+            } catch (AssertionError e) {
+              BaseGeoPointTestCase.toWebGLEarth(latMin, latMax, lonMin, lonMax, centerLat, centerLon, radius);
+              throw e;
+            }
           }
         }
       }
@@ -176,7 +181,7 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
     double latMax = -0.5234650208875147;
     double lonMin = -44.98696317676977;
     double lonMax = -44.65575890072137;
-    if (isDisjoint(centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax)) {
+    if (isDisjointAccordingToRob(centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax)) {
       // intersects says false: test a ton of points
       for (int j = 0; j < 100; j++) {
         double lat = latMin + (latMax - latMin) * random().nextDouble();
@@ -218,6 +223,38 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
     double closestLat = Math.max(latMin, Math.min(centerLat, latMax));
     double closestLon = Math.max(lonMin, Math.min(centerLon, lonMax));
     return SloppyMath.haversinMeters(centerLat, centerLon, closestLat, closestLon) <= radius;
+  }
+  
+  static boolean isDisjointAccordingToRob(double centerLat, double centerLon, double radius, double latMin, double latMax, double lonMin, double lonMax) {
+    GeoRect box = GeoUtils.circleToBBox(centerLat, centerLon, radius);
+    if (lonMax - centerLon < 90 && centerLon - lonMin < 90 && /* box is not wrapping around the world */
+        box.maxLon - box.minLon < 90 && /* circle is not wrapping around the world */
+        box.crossesDateline() == false) /* or crossing dateline! */ {
+      // ok
+    } else {
+      return false;
+    }
+    
+    if ((centerLat >= latMin && centerLat <= latMax) || (centerLon >= lonMin && centerLon <= lonMax)) {
+      // e.g. circle itself fully inside / crossing axis
+      return false;
+    }
+    
+    double axisLat = GeoUtils.axisLat(centerLat, radius);
+    assert GeoUtils.isValidLat(axisLat) : "axisLat(" + centerLat + "," + radius + ")=" + axisLat;
+    if (axisLat >= latMin && axisLat <= latMax) {
+      return false; // axis crosser
+    }
+    
+    // point inside
+    if (SloppyMath.haversinMeters(centerLat, centerLon, latMin, lonMin) <= radius ||
+        SloppyMath.haversinMeters(centerLat, centerLon, latMin, lonMax) <= radius ||
+        SloppyMath.haversinMeters(centerLat, centerLon, latMax, lonMin) <= radius ||
+        SloppyMath.haversinMeters(centerLat, centerLon, latMax, lonMax) <= radius) {
+      return false;
+    }
+
+    return true;
   }
 
   static boolean isDisjoint(double centerLat, double centerLon, double radius, double latMin, double latMax, double lonMin, double lonMax) {

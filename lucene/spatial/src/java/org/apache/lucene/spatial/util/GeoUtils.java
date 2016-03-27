@@ -80,7 +80,8 @@ public final class GeoUtils {
   public static GeoRect circleToBBox(final double centerLat, final double centerLon, final double radiusMeters) {
     final double radLat = TO_RADIANS * centerLat;
     final double radLon = TO_RADIANS * centerLon;
-    double radDistance = radiusMeters / SEMIMAJOR_AXIS;
+    // LUCENE-7143
+    double radDistance = (radiusMeters + 7E-2) / SEMIMAJOR_AXIS;
     double minLat = radLat - radDistance;
     double maxLat = radLat + radDistance;
     double minLon;
@@ -169,6 +170,7 @@ public final class GeoUtils {
     double deltaLon = asin(sloppySin(radDistance) / cos(radLat)); // A
     // solve for B, using sine rule of spherical trig:  sin b * sin A / sin a = sin B
     double latAngle = asin(sloppySin(radLat) * sloppySin(deltaLon) / sloppySin(radDistance)); // B
+    assert Double.isFinite(latAngle);
     // napier's analogies, solve for the final side c:
     // 2 equations, the may produce the same result:
     // sin (0.5 * (A - B)) / sin (0.5 * (A + B)) = tan (0.5 * (a - b)) / tan (0.5 * c)
