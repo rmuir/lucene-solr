@@ -965,35 +965,53 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
     dir.close();
   }
 
-  // nocommit not necessarily interesting yet:
   /** Returns {polyLats, polyLons} double[] array */
   private double[][] surpriseMePolygon() {
-    double centerLat = randomLat(false);
-    double centerLon = randomLon(false);
-
-    List<Double> lats = new ArrayList<>();
-    List<Double> lons = new ArrayList<>();
-    double angle = 0.0;
+    // repeat until we get a poly that doesn't cross dateline:
+    newPoly:
     while (true) {
-      angle += random().nextDouble()*120.0;
-      if (angle > 360) {
-        break;
+      //System.out.println("\nPOLY ITER");
+      double centerLat = randomLat(false);
+      double centerLon = randomLon(false);
+
+      double radius = 0.1 + 20 * random().nextDouble();
+      double radiusDelta = random().nextDouble();
+
+      List<Double> lats = new ArrayList<>();
+      List<Double> lons = new ArrayList<>();
+      double angle = 0.0;
+      while (true) {
+        angle += random().nextDouble()*40.0;
+        //System.out.println("  angle " + angle);
+        if (angle > 360) {
+          break;
+        }
+        double len = radius * (1.0 - radiusDelta + radiusDelta * random().nextDouble());
+        //System.out.println("    len=" + len);
+        double lat = wrapLat(centerLat + len * Math.cos(Math.toRadians(angle)));
+        double lon = centerLon + len * Math.sin(Math.toRadians(angle));
+        if (lon <= GeoUtils.MIN_LON_INCL || lon >= GeoUtils.MAX_LON_INCL) {
+          // cannot cross dateline: try again!
+          continue newPoly;
+        }
+        lats.add(wrapLat(lat));
+        lons.add(wrapLon(lon));
+
+        //System.out.println("    lat=" + lats.get(lats.size()-1) + " lon=" + lons.get(lons.size()-1));
       }
-      double len = 10.0 * random().nextDouble();
-      lats.add(Math.cos(len * Math.toRadians(angle)));
-      lons.add(Math.sin(len * Math.toRadians(angle)));
-    }
-    lats.add(lats.get(0));
-    lons.add(lons.get(0));
 
-    double[] latsArray = new double[lats.size()];
-    double[] lonsArray = new double[lons.size()];
-    for(int i=0;i<lats.size();i++) {
-      latsArray[i] = lats.get(i);
-      lonsArray[i] = lons.get(i);
-    }
+      // close it
+      lats.add(lats.get(0));
+      lons.add(lons.get(0));
 
-    return new double[][] {latsArray, lonsArray};
+      double[] latsArray = new double[lats.size()];
+      double[] lonsArray = new double[lons.size()];
+      for(int i=0;i<lats.size();i++) {
+        latsArray[i] = lats.get(i);
+        lonsArray[i] = lons.get(i);
+      }
+      return new double[][] {latsArray, lonsArray};
+    }
   }
 
   // nocommit not necessarily interesting yet:
@@ -1206,11 +1224,16 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
                  21.57567258590899, 24.932828252405756,
                  33.446926576806234, -18.702673123352326,
                  3672421.3834118056);
-    */
     toWebGLEarth(20.349435726973987, 75.6212078954794,
                  72.85917553486915, 77.19077779277924,
                  42.07639048470125, 107.07274153895605,
                  2975340.785331476);
+    */
+    List<double[][]> polys = new ArrayList<>();
+    for(int i=0;i<100;i++) {
+      polys.add(surpriseMePolygon());
+    }
+    polysToWebGLEarth(polys);
   }
 
   private static void plotLatApproximatelyOnEarthSurface(String name, String color, double lat, double minLon, double maxLon) {
@@ -1241,6 +1264,45 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
     }
     System.out.println("        ], {color: \"" + color + "\", fillColor: \"#ffffff\", opacity: " + (color.equals("#ffffff") ? "0.3" : "1") + ", fillOpacity: 0.0001});");
     System.out.println("        " + name + ".addTo(earth);");
+  }
+
+  // http://www.webglearth.org has API details:
+  public static void polysToWebGLEarth(List<double[][]> polys) {
+    System.out.println("<!DOCTYPE HTML>");
+    System.out.println("<html>");
+    System.out.println("  <head>");
+    System.out.println("    <script src=\"http://www.webglearth.com/v2/api.js\"></script>");
+    System.out.println("    <script>");
+    System.out.println("      function initialize() {");
+    System.out.println("        var earth = new WE.map('earth_div');");
+
+    int count = 0;
+    for (double[][] poly : polys) {
+      System.out.println("        var poly" + count + " = WE.polygon([");
+      for(int i=0;i<poly[0].length;i++) {
+        double lat = poly[0][i];
+        double lon = poly[1][i];
+        System.out.println("          [" + lat + ", " + lon + "],");
+      }
+      System.out.println("        ], {color: '#00ff00'});");    
+      System.out.println("        poly" + count + ".addTo(earth);");
+    }
+
+    System.out.println("        WE.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{");
+    System.out.println("          attribution: '© OpenStreetMap contributors'");
+    System.out.println("        }).addTo(earth);");
+    System.out.println("      }");
+    System.out.println("    </script>");
+    System.out.println("    <style>");
+    System.out.println("      html, body{padding: 0; margin: 0;}");
+    System.out.println("      #earth_div{top: 0; right: 0; bottom: 0; left: 0; position: absolute !important;}");
+    System.out.println("    </style>");
+    System.out.println("    <title>WebGL Earth API: Hello World</title>");
+    System.out.println("  </head>");
+    System.out.println("  <body onload=\"initialize()\">");
+    System.out.println("    <div id=\"earth_div\"></div>");
+    System.out.println("  </body>");
+    System.out.println("</html>");
   }
 
   // http://www.webglearth.org has API details:
