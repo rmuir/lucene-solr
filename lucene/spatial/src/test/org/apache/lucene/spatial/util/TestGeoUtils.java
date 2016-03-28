@@ -300,6 +300,19 @@ public class TestGeoUtils extends LuceneTestCase {
   }
 
   public void testAxisLat() {
-    assertEquals(0, GeoUtils.axisLat(0, GeoUtils.SEMIMAJOR_AXIS / 4), 0.0D);
+    double earthCircumference = 2D * Math.PI * GeoUtils.SEMIMAJOR_AXIS;
+    //assertEquals(90, GeoUtils.axisLat(0, earthCircumference / 4), 0.0D);
+
+    final double radius = 100000; // 100k meters
+    double prevAxisLat = GeoUtils.axisLat(0.5D, radius);
+    for (double lat = 1D; lat < 89.5D; lat += 0.5D) {
+      double nextAxisLat = GeoUtils.axisLat(lat, radius);
+      GeoRect bbox = GeoUtils.circleToBBox(lat, 180D, radius);
+      double dist = SloppyMath.haversinMeters(lat, 180D, nextAxisLat, bbox.maxLon);
+      assertEquals(dist, radius, 0.0D);
+      assertTrue(prevAxisLat <= nextAxisLat);
+      prevAxisLat = nextAxisLat;
+    }
+
   }
 }

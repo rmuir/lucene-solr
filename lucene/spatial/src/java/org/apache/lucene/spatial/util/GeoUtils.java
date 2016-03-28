@@ -176,14 +176,23 @@ public final class GeoUtils {
     // we can transform this into sins, and then solve for l2
     // l2 = asin(sin(l1) * cos(r))
 
-    // determine l1 as distance from closest pole, to form a right triangle with longitude lines
     double l1 = TO_RADIANS * centerLat;
+    double r = (radiusMeters + 7E-2) / SEMIMAJOR_AXIS;
+
+    // if we are within radius range of a pole, the lat is the pole itself
+    if (l1 + r >= MAX_LAT_RADIANS) {
+      return MAX_LAT_INCL;
+    } else if (l1 - r <= MIN_LAT_RADIANS) {
+      return MIN_LAT_INCL;
+    }
+
+    // adjust l1 as distance from closest pole, to form a right triangle with longitude lines
     if (centerLat > 0) {
       l1 = PIO2 - l1;
     } else {
       l1 += PIO2;
     }
-    double r = radiusMeters / GeoUtils.SEMIMAJOR_AXIS;
+
     double l2 = asin(sloppySin(l1) * cos(r));
     // now adjust back to range pi/2 to -pi/2, ie latitude degrees in radians
     if (centerLat > 0) {
