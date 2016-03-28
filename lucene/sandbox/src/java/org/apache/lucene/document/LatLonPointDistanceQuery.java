@@ -205,10 +205,7 @@ final class LatLonPointDistanceQuery extends Query {
                                // we are fully enclosed, collect everything within this subtree
                                return Relation.CELL_INSIDE_QUERY;
                              } else {
-                               if (lonMax - longitude < 90 && longitude - lonMin < 90 && /* box is not wrapping around the world */
-                                   box.maxLon - box.minLon < 90 && /* circle is not wrapping around the world */
-                                   box.crossesDateline() == false && /* or crossing dateline! */
-                                   intersects(latitude, longitude, radiusMeters, latMin, latMax, lonMin, lonMax) == false) {
+                               if (isDisjointAccordingToRob(latitude, longitude, radiusMeters, latMin, latMax, lonMin, lonMax)) {
                                  return Relation.CELL_OUTSIDE_QUERY;
                                }
                                // recurse: its inside our bounding box(es), but not fully, or it wraps around.
@@ -324,13 +321,35 @@ final class LatLonPointDistanceQuery extends Query {
     return sb.toString();
   }
 
-  static boolean intersects(double centerLat, double centerLon, double radius, double latMin, double latMax, double lonMin, double lonMax) {
-    if ((centerLat >= latMin && centerLat <= latMax) || (centerLon >= lonMin && centerLon <= lonMax)) {
-      // e.g. circle itself fully inside
-      return true;
+  static boolean isDisjointAccordingToRob(double centerLat, double centerLon, double radius, double latMin, double latMax, double lonMin, double lonMax) {
+    GeoRect box = GeoUtils.circleToBBox(centerLat, centerLon, radius);
+    if (lonMax - centerLon < 90 && centerLon - lonMin < 90 && /* box is not wrapping around the world */
+        box.maxLon - box.minLon < 90 && /* circle is not wrapping around the world */
+        box.crossesDateline() == false) /* or crossing dateline! */ {
+      // ok
+    } else {
+      return false;
     }
-    double closestLat = Math.max(latMin, Math.min(centerLat, latMax));
-    double closestLon = Math.max(lonMin, Math.min(centerLon, lonMax));
-    return SloppyMath.haversinMeters(centerLat, centerLon, closestLat, closestLon) <= radius;
+    
+    if ((centerLat >= latMin && centerLat <= latMax) || (centerLon >= lonMin && centerLon <= lonMax)) {
+      // e.g. circle itself fully inside / crossing axis
+      return false;
+    }
+    
+    double axisLat = GeoUtils.axisLat(centerLat, radius);
+    assert GeoUtils.isValidLat(axisLat) : "axisLat(" + centerLat + "," + radius + ")=" + axisLat;
+    if (axisLat >= latMin && axisLat <= latMax) {
+      return false; // axis crosser
+    }
+    
+    // point inside
+    if (SloppyMath.haversinMeters(centerLat, centerLon, latMin, lonMin) <= radius ||
+        SloppyMath.haversinMeters(centerLat, centerLon, latMin, lonMax) <= radius ||
+        SloppyMath.haversinMeters(centerLat, centerLon, latMax, lonMin) <= radius ||
+        SloppyMath.haversinMeters(centerLat, centerLon, latMax, lonMax) <= radius) {
+      return false;
+    }
+
+    return true;
   }
 }

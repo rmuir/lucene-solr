@@ -184,7 +184,7 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
     double latMax = 22.67916185649534;
     double lonMin = 128.0372938255583;
     double lonMax = 168.5384744000075;
-    if (isDisjoint(centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax)) {
+    if (isDisjointAccordingToRob(centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax)) {
       // intersects says false: test a ton of points
       for (int j = 0; j < 100; j++) {
         double lat = latMin + (latMax - latMin) * random().nextDouble();
