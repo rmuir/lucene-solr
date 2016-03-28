@@ -303,14 +303,16 @@ public class TestGeoUtils extends LuceneTestCase {
     double earthCircumference = 2D * Math.PI * GeoUtils.SEMIMAJOR_AXIS;
     assertEquals(90, GeoUtils.axisLat(0, earthCircumference / 4), 0.0D);
 
-    final double radius = earthCircumference / 4 * random().nextDouble();
+    final double radius = 10000000 * random().nextDouble();
     double prevAxisLat = GeoUtils.axisLat(0.5D, radius);
     for (double lat = 1D; lat < 89.5D; lat += 0.5D) {
       double nextAxisLat = GeoUtils.axisLat(lat, radius);
       GeoRect bbox = GeoUtils.circleToBBox(lat, 180D, radius);
       double dist = SloppyMath.haversinMeters(lat, 180D, nextAxisLat, bbox.maxLon);
       //System.out.println("" + lat + " = " + dist);
-      assertEquals("lat = " + lat, dist, radius, 0.1D);
+      if (nextAxisLat < GeoUtils.MAX_LAT_INCL) {
+        assertEquals("lat = " + lat, dist, radius, 0.1D);
+      }
       assertTrue("lat = " + lat, prevAxisLat <= nextAxisLat);
       prevAxisLat = nextAxisLat;
     }
@@ -321,7 +323,9 @@ public class TestGeoUtils extends LuceneTestCase {
       GeoRect bbox = GeoUtils.circleToBBox(lat, 180D, radius);
       double dist = SloppyMath.haversinMeters(lat, 180D, nextAxisLat, bbox.maxLon);
       //System.out.println("" + lat + " = " + dist);
-      assertEquals("lat = " + lat, dist, radius, 0.1D);
+      if (nextAxisLat > GeoUtils.MIN_LAT_INCL) {
+        assertEquals("lat = " + lat, dist, radius, 0.1D);
+      }
       assertTrue("lat = " + lat, prevAxisLat >= nextAxisLat);
       prevAxisLat = nextAxisLat;
     }
