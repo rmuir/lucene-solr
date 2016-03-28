@@ -173,8 +173,8 @@ public final class GeoUtils {
     // we know r is tangent to longitudes at l2, therefore it is a right angle
     // so from the law of cosines, with the angle of l1 being 90, we have:
     // cos(l1) = cos(r) * cos(l2)
-    // we can transform this into sins, and then solve for l2
-    // l2 = asin(sin(l1) * cos(r))
+    // we transform this into:
+    // l2 = PI/2 - asin( sin(PI/2 - l1) / cos(r) )
 
     double l1 = TO_RADIANS * centerLat;
     double r = (radiusMeters + 7E-2) / SEMIMAJOR_AXIS;
@@ -193,18 +193,13 @@ public final class GeoUtils {
       l1 += PIO2;
     }
 
-    double l2 = asin(sloppySin(l1) * cos(r));
+    double l2 = PIO2 - Math.asin(Math.sin(PIO2 - l1) / Math.cos(r));
+    assert l2 != Double.NaN;
     // now adjust back to range pi/2 to -pi/2, ie latitude degrees in radians
     if (centerLat > 0) {
       l2 = PIO2 - l2;
     } else {
       l2 -= PIO2;
-    }
-    // adjust for the latitude being "below" or "above" the poles
-    if (l2 < MIN_LAT_RADIANS) {
-      l2 = MIN_LAT_RADIANS;
-    } else if (l2 > MAX_LAT_RADIANS) {
-      l2 = MAX_LAT_RADIANS;
     }
     return TO_DEGREES * l2;
   }
