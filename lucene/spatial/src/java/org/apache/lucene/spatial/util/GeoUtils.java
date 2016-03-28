@@ -166,15 +166,17 @@ public final class GeoUtils {
    * @return A latitude
    */
   public static double axisLat(double centerLat, double radiusMeters) {
-    // spherical triangle with:
+    // A spherical triangle with:
     // r is the radius of the circle in radians
     // l1 is the latitude of the circle center
     // l2 is the latitude of the point at which the circle intersect's its bbox longitudes
-    // we know r is tangent to longitudes at l2, therefore it is a right angle
-    // so from the law of cosines, with the angle of l1 being 90, we have:
+    // We know r is tangent to longitudes at l2, therefore it is a right angle.
+    // So from the law of cosines, with the angle of l1 being 90, we have:
     // cos(l1) = cos(r) * cos(l2)
-    // we transform this into:
+    // Taking acos can be error prone
+    // We transform this into:
     // l2 = PI/2 - asin( sin(PI/2 - l1) / cos(r) )
+    // This ensures we always get a positive angle (0 to PI/2).
 
     double l1 = TO_RADIANS * centerLat;
     double r = (radiusMeters + 7E-2) / SEMIMAJOR_AXIS;
