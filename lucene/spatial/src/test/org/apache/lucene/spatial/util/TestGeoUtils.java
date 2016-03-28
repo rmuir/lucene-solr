@@ -298,4 +298,8 @@ public class TestGeoUtils extends LuceneTestCase {
       assertFalse(rect.crossesDateline());
     }
   }
+
+  public void testAxisLat() {
+    assertEquals(0, GeoUtils.axisLat(0, GeoUtils.SEMIMAJOR_AXIS / 4), 0.0D);
+  }
 }

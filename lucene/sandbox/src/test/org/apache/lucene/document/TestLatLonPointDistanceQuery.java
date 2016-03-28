@@ -17,6 +17,7 @@
 package org.apache.lucene.document;
 
 import com.carrotsearch.randomizedtesting.annotations.Repeat;
+import com.carrotsearch.randomizedtesting.annotations.Seed;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.RandomIndexWriter;
 import org.apache.lucene.search.IndexSearcher;
@@ -91,6 +92,7 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
   }
 
   //@Repeat(iterations = 100)
+  @Seed( value = "ABC123")
   public void testCircleOpto() throws Exception {
     for (int i = 0; i < 1000; i++) {
       // circle
@@ -170,18 +172,19 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
     return min + (max - min) * random().nextDouble();
   }
 
+  @Seed("ABCDEF")
   public void testFailure() throws Exception {
     // circle
-    double centerLat = -5.846698483550725d;
-    double centerLon = -49.61814801966855d;
-    double radius = 614452.7269240196;
+    double centerLat = 1.782197335198461d;
+    double centerLon = 95.99347989863526d;
+    double radius = 3803295.6673769546;
 
     // box
-    double latMin = -69.29803962492491;
-    double latMax = -0.5234650208875147;
-    double lonMin = -44.98696317676977;
-    double lonMax = -44.65575890072137;
-    if (isDisjointAccordingToRob(centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax)) {
+    double latMin = -64.70318916821618;
+    double latMax = 22.67916185649534;
+    double lonMin = 128.0372938255583;
+    double lonMax = 168.5384744000075;
+    if (isDisjoint(centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax)) {
       // intersects says false: test a ton of points
       for (int j = 0; j < 100; j++) {
         double lat = latMin + (latMax - latMin) * random().nextDouble();

@@ -158,32 +158,45 @@ public final class GeoUtils {
     return cos(a - PIO2);
   }
 
+  /**
+   * Calculate the latitude of a cirlce's intersections with its bbox longitudes.
+   *
+   * @param centerLat The latitude of the circle center
+   * @param radiusMeters The radius of the circle in meters
+   * @return A latitude
+   */
   public static double axisLat(double centerLat, double radiusMeters) {
     // spherical triangle with:
-    // A is angle between longitudes at the north pole
-    // a is the radius of the circle in radians
-    // b is the latitude of the circle center (ie the distance from the north pole to the circle center)
-    // B is the angle between the circle radius and the axis latitude
-    // c is the latitude of the axis (ie the distance from the north pole to the intersection of the radius and bbox longitude)
-    final double radLat = TO_RADIANS * centerLat; // b
-    double radDistance = radiusMeters / GeoUtils.SEMIMAJOR_AXIS; // a
-    double deltaLon = asin(sloppySin(radDistance) / cos(radLat)); // A
-    // solve for B, using sine rule of spherical trig:  sin b * sin A / sin a = sin B
-    double latAngle = asin(sloppySin(radLat) * sloppySin(deltaLon) / sloppySin(radDistance)); // B
-    assert Double.isFinite(latAngle);
-    // napier's analogies, solve for the final side c:
-    // 2 equations, the may produce the same result:
-    // sin (0.5 * (A - B)) / sin (0.5 * (A + B)) = tan (0.5 * (a - b)) / tan (0.5 * c)
-    // cos (0.5 * (A - B)) / cos (0.5 * (A + B)) = tan (0.5 * (a + b)) / tan (0.5 * c)
-    double axisLat1 = 2D * atan( tan( 0.5D * (radDistance - radLat)) * sloppySin( 0.5D * (deltaLon + latAngle)) / sloppySin( 0.5D * (deltaLon - latAngle)));
-    double axisLat2 = 2D * atan( tan( 0.5D * (radDistance + radLat)) * cos( 0.5D * (deltaLon + latAngle)) / cos( 0.5D * (deltaLon - latAngle)));
-    /* some logic here for when to use axisLat1...
-    if () {
-      return TO_DEGREES * axisLat1;
+    // r is the radius of the circle in radians
+    // l1 is the latitude of the circle center
+    // l2 is the latitude of the point at which the circle intersect's its bbox longitudes
+    // we know r is tangent to longitudes at l2, therefore it is a right angle
+    // so from the law of cosines, with the angle of l1 being 90, we have:
+    // cos(l1) = cos(r) * cos(l2)
+    // we can transform this into sins, and then solve for l2
+    // l2 = asin(sin(l1) * cos(r))
+
+    // determine l1 as distance from closest pole, to form a right triangle with longitude lines
+    double l1 = TO_RADIANS * centerLat;
+    if (centerLat > 0) {
+      l1 = PIO2 - l1;
+    } else {
+      l1 += PIO2;
     }
-    */
-    double axisLat1Deg = TO_DEGREES * axisLat1;
-    double axisLat2Deg = TO_DEGREES * axisLat2;
-    return TO_DEGREES * axisLat2;
+    double r = radiusMeters / GeoUtils.SEMIMAJOR_AXIS;
+    double l2 = asin(sloppySin(l1) * cos(r));
+    // now adjust back to range pi/2 to -pi/2, ie latitude degrees in radians
+    if (centerLat > 0) {
+      l2 = PIO2 - l2;
+    } else {
+      l2 -= PIO2;
+    }
+    // adjust for the latitude being "below" or "above" the poles
+    if (l2 < MIN_LAT_RADIANS) {
+      l2 = MIN_LAT_RADIANS;
+    } else if (l2 > MAX_LAT_RADIANS) {
+      l2 = MAX_LAT_RADIANS;
+    }
+    return TO_DEGREES * l2;
   }
 }
