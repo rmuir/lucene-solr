@@ -206,13 +206,18 @@ final class LatLonPointDistanceQuery extends Query {
                                  SloppyMath.haversinMeters(latitude, longitude, latMax, lonMax) <= radiusMeters) {
                                // we are fully enclosed, collect everything within this subtree
                                return Relation.CELL_INSIDE_QUERY;
-                             } else {
-                               if (isDisjointAccordingToRob(latitude, longitude, radiusMeters, latMin, latMax, lonMin, lonMax)) {
+                             } else if ((latitude < lonMin || longitude > lonMax) && (axisLat < latMin || axisLat > latMax)) {
+                               // circle not fully inside / crossing axis
+                               if (SloppyMath.haversinMeters(latitude, longitude, latMin, lonMin) > radiusMeters &&
+                                   SloppyMath.haversinMeters(latitude, longitude, latMin, lonMax) > radiusMeters &&
+                                   SloppyMath.haversinMeters(latitude, longitude, latMax, lonMin) > radiusMeters &&
+                                   SloppyMath.haversinMeters(latitude, longitude, latMax, lonMax) > radiusMeters) {
+                                 // no points inside
                                  return Relation.CELL_OUTSIDE_QUERY;
                                }
-                               // recurse: its inside our bounding box(es), but not fully, or it wraps around.
-                               return Relation.CELL_CROSSES_QUERY;
                              }
+                             // recurse: crosses our query.
+                             return Relation.CELL_CROSSES_QUERY;
                            }
                          });
 
@@ -321,103 +326,5 @@ final class LatLonPointDistanceQuery extends Query {
     sb.append(radiusMeters);
     sb.append(" meters");
     return sb.toString();
-  }
-  
-  static boolean isDisjoint(double centerLat, double centerLon, double radius, GeoRect box, double axisLat, double latMin, double latMax, double lonMin, double lonMax) {
-    if (lonMax - centerLon < 90 && centerLon - lonMin < 90 && /* box is not wrapping around the world */
-        box.maxLon - box.minLon < 90 && /* circle is not wrapping around the world */
-        box.crossesDateline() == false) /* or crossing dateline! */ {
-      // ok
-    } else {
-      return false;
-    }
-
-    // these assume the bbox intersects the rect in some way
-    boolean topIn = latMax <= box.maxLat;
-    boolean rightIn = lonMax <= box.maxLon;
-    boolean bottomIn = latMin >= box.minLat;
-    boolean leftIn = lonMin >= box.minLon;
-    // build a bitmask where each bit indicates whether that edge of the rect is in the bbox
-    int state = (topIn ? 0x8 : 0) + (rightIn ? 0x4 : 0) + (bottomIn ? 0x1 : 0) + (leftIn ? 0x1 : 0);
-    if (state == 0) {
-      return false;
-    } else if (state == 0b0001) {
-      return false;
-    } else if (state == 0b0010) {
-      return false;
-    } else if (state == 0b0011) {
-      // return bottom left not in and no axis
-      return latMin > axisLat && lonMin > centerLon &&
-             pointInCircle(centerLat, centerLon, radius, latMin, lonMin) == false;
-    } else if (state == 0b0100) {
-      return false;
-    } else if (state == 0b0101) {
-      return false;
-    } else if (state == 0b0110) {
-      // return lower right not in and no axis crossing
-      return latMin > axisLat && lonMax < centerLon &&
-             pointInCircle(centerLat, centerLon, radius, latMin, lonMax) == false;
-    } else if (state == 0b0111) {
-      // return bottom left and right not in and no axis
-      return (lonMax < centerLon || lonMin > centerLon) && latMin > axisLat &&
-             pointInCircle(centerLat, centerLon, radius, latMin, lonMin) == false &&
-             pointInCircle(centerLat, centerLon, radius, latMin, lonMax) == false;
-
-    } else if (state == 0b1000) {
-      return false;
-    } else if (state == 0b1001) {
-      // return upper left not in and no axis
-      return lonMin > centerLon && latMax < axisLat &&
-             pointInCircle(centerLat, centerLon, radius, latMax, lonMin) == false;
-    } else if (state == 0b1010) {
-      return false;
-    } else if (state == 0b1011) {
-      // return top left and bottom left not in and no axis
-      return (latMin > axisLat || latMax < axisLat) && lonMin > centerLon &&
-             pointInCircle(centerLat, centerLon, radius, latMax, lonMin) == false &&
-             pointInCircle(centerLat, centerLon, radius, latMin, lonMin) == false;
-    } else if (state == 0b1100) {
-      // return upper right not in and no axis crossing
-      return lonMax < centerLon && latMax < axisLat &&
-             pointInCircle(centerLat, centerLon, radius, latMax, lonMax) == false;
-    } else if (state == 0b1101) {
-      // return top left and right not in and no axis
-      return (lonMax < centerLon || lonMin > centerLon) && latMax < axisLat &&
-             pointInCircle(centerLat, centerLon, radius, latMax, lonMin) == false &&
-             pointInCircle(centerLat, centerLon, radius, latMax, lonMax) == false;
-    } else if (state == 0b1110) {
-      // return upper and lower right not in and no axis crossing
-      return (latMin > axisLat || latMax < axisLat) && lonMax < centerLon &&
-             pointInCircle(centerLat, centerLon, radius, latMin, lonMax) == false &&
-             pointInCircle(centerLat, centerLon, radius, latMax, lonMax) == false;
-    } else { // state == 0x1111
-      return (latMin > axisLat || latMax < axisLat) && (lonMax < centerLon || lonMin > centerLon) &&
-             pointInCircle(centerLat, centerLon, radius, latMax, lonMin) == false &&
-             pointInCircle(centerLat, centerLon, radius, latMax, lonMax) == false &&
-             pointInCircle(centerLat, centerLon, radius, latMin, lonMin) == false &&
-             pointInCircle(centerLat, centerLon, radius, latMin, lonMax) == false;
-    }
-  }
-  
-  static boolean isDisjointAccordingToRob(double centerLat, double centerLon, double radius, double latMin, double latMax, double lonMin, double lonMax) {
-    double axisLat = GeoUtils.axisLat(centerLat, radius);
-    if ((centerLon >= lonMin && centerLon <= lonMax) || (axisLat >= latMin && axisLat <= latMax)) {
-      // e.g. circle itself fully inside / crossing axis
-      return false;
-    }
-    
-    // point inside
-    if (SloppyMath.haversinMeters(centerLat, centerLon, latMin, lonMin) <= radius ||
-        SloppyMath.haversinMeters(centerLat, centerLon, latMin, lonMax) <= radius ||
-        SloppyMath.haversinMeters(centerLat, centerLon, latMax, lonMin) <= radius ||
-        SloppyMath.haversinMeters(centerLat, centerLon, latMax, lonMax) <= radius) {
-      return false;
-    }
-
-    return true;
-  }
-
-  static boolean pointInCircle(double centerLat, double centerLon, double radius, double lat, double lon) {
-    return SloppyMath.haversinMeters(centerLat, centerLon, lat, lon) <= radius;
   }
 }
