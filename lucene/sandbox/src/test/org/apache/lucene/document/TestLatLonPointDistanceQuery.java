@@ -241,16 +241,11 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
     } else {
       return false;
     }
-    
-    if (centerLon >= lonMin && centerLon <= lonMax) {
+
+    double axisLat = GeoUtils.axisLat(centerLat, radius);
+    if ((centerLon >= lonMin && centerLon <= lonMax) || (axisLat >= latMin && axisLat <= latMax)) {
       // e.g. circle itself fully inside / crossing axis
       return false;
-    }
-    
-    double axisLat = GeoUtils.axisLat(centerLat, radius);
-    assert GeoUtils.isValidLat(axisLat) : "axisLat(" + centerLat + "," + radius + ")=" + axisLat;
-    if (axisLat >= latMin && axisLat <= latMax) {
-      return false; // axis crosser
     }
     
     // point inside
