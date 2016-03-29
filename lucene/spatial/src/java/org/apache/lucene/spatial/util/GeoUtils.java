@@ -109,7 +109,8 @@ public final class GeoUtils {
   public static GeoRect circleToBBox(final double centerLat, final double centerLon, final double radiusMeters) {
     final double radLat = TO_RADIANS * centerLat;
     final double radLon = TO_RADIANS * centerLon;
-    double radDistance = radiusMeters / SEMIMAJOR_AXIS;
+    // LUCENE-7143
+    double radDistance = (radiusMeters + 7E-2) / SEMIMAJOR_AXIS;
     double minLat = radLat - radDistance;
     double maxLat = radLat + radDistance;
     double minLon;
@@ -176,4 +177,55 @@ public final class GeoUtils {
     return cos(a - PIO2);
   }
 
+  /** maximum error from {@link #axisLat(double, double)}. logic must be prepared to handle this */
+  public static final double AXISLAT_ERROR = 0.1D / SEMIMAJOR_AXIS * TO_DEGREES;
+
+  /**
+   * Calculate the latitude of a circle's intersections with its bbox longitudes.
+   * <p>
+   * <b>NOTE:</b> the returned value will be +/- {@link #AXISLAT_ERROR} of the actual value.
+   * @param centerLat The latitude of the circle center
+   * @param radiusMeters The radius of the circle in meters
+   * @return A latitude
+   */
+  public static double axisLat(double centerLat, double radiusMeters) {
+    // A spherical triangle with:
+    // r is the radius of the circle in radians
+    // l1 is the latitude of the circle center
+    // l2 is the latitude of the point at which the circle intersect's its bbox longitudes
+    // We know r is tangent to longitudes at l2, therefore it is a right angle.
+    // So from the law of cosines, with the angle of l1 being 90, we have:
+    // cos(l1) = cos(r) * cos(l2)
+    // Taking acos can be error prone
+    // We transform this into:
+    // l2 = PI/2 - asin( sin(PI/2 - l1) / cos(r) )
+    // This ensures we always get a positive angle (0 to PI/2).
+
+    double l1 = TO_RADIANS * centerLat;
+    double r = (radiusMeters + 7E-2) / SEMIMAJOR_AXIS;
+
+    // if we are within radius range of a pole, the lat is the pole itself
+    if (l1 + r >= MAX_LAT_RADIANS) {
+      return MAX_LAT_INCL;
+    } else if (l1 - r <= MIN_LAT_RADIANS) {
+      return MIN_LAT_INCL;
+    }
+
+    // adjust l1 as distance from closest pole, to form a right triangle with longitude lines
+    if (centerLat > 0) {
+      l1 = PIO2 - l1;
+    } else {
+      l1 += PIO2;
+    }
+
+    double l2 = PIO2 - Math.asin(Math.sin(PIO2 - l1) / Math.cos(r));
+    assert !Double.isNaN(l2);
+    // now adjust back to range pi/2 to -pi/2, ie latitude degrees in radians
+    if (centerLat > 0) {
+      l2 = PIO2 - l2;
+    } else {
+      l2 -= PIO2;
+    }
+    return TO_DEGREES * l2;
+  }
 }
