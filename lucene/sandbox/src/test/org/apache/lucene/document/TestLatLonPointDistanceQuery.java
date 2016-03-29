@@ -125,7 +125,7 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
         assert latMax >= latMin;
         assert lonMax >= lonMin;
 
-        if (isDisjoint(centerLat, centerLon, radius, box, axisLat, latMin, latMax, lonMin, lonMax)) {
+        if (isDisjointAccordingToRob(centerLat, centerLon, radius, latMin, latMax, lonMin, lonMax)) {
           // intersects says false: test a ton of points
           for (int j = 0; j < 200; j++) {
             double lat = latMin + (latMax - latMin) * random().nextDouble();
@@ -242,7 +242,7 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
       return false;
     }
     
-    if ((centerLat >= latMin && centerLat <= latMax) || (centerLon >= lonMin && centerLon <= lonMax)) {
+    if (centerLon >= lonMin && centerLon <= lonMax) {
       // e.g. circle itself fully inside / crossing axis
       return false;
     }

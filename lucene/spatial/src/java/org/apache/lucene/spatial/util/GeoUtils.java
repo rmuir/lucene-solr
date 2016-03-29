@@ -159,7 +159,7 @@ public final class GeoUtils {
   }
 
   /**
-   * Calculate the latitude of a cirlce's intersections with its bbox longitudes.
+   * Calculate the latitude of a circle's intersections with its bbox longitudes.
    *
    * @param centerLat The latitude of the circle center
    * @param radiusMeters The radius of the circle in meters
@@ -196,7 +196,7 @@ public final class GeoUtils {
     }
 
     double l2 = PIO2 - Math.asin(Math.sin(PIO2 - l1) / Math.cos(r));
-    assert l2 != Double.NaN;
+    assert !Double.isNaN(l2);
     // now adjust back to range pi/2 to -pi/2, ie latitude degrees in radians
     if (centerLat > 0) {
       l2 = PIO2 - l2;
