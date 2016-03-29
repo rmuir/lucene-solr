@@ -207,9 +207,12 @@ final class LatLonPointDistanceQuery extends Query {
                                // we are fully enclosed, collect everything within this subtree
                                return Relation.CELL_INSIDE_QUERY;
                              } else {
-                               if (isDisjoint(latitude, longitude, radiusMeters, box, axisLat, latMin, latMax, lonMin, lonMax)) {
+                               if (isDisjointAccordingToRob(latitude, longitude, radiusMeters, latMin, latMax, lonMin, lonMax)) {
                                  return Relation.CELL_OUTSIDE_QUERY;
                                }
+                               //if (isDisjoint(latitude, longitude, radiusMeters, box, axisLat, latMin, latMax, lonMin, lonMax)) {
+                               //  return Relation.CELL_OUTSIDE_QUERY;
+                               //}
                                // recurse: its inside our bounding box(es), but not fully, or it wraps around.
                                return Relation.CELL_CROSSES_QUERY;
                              }
@@ -397,6 +400,38 @@ final class LatLonPointDistanceQuery extends Query {
              pointInCircle(centerLat, centerLon, radius, latMin, lonMin) == false &&
              pointInCircle(centerLat, centerLon, radius, latMin, lonMax) == false;
     }
+  }
+  
+  static boolean isDisjointAccordingToRob(double centerLat, double centerLon, double radius, double latMin, double latMax, double lonMin, double lonMax) {
+    GeoRect box = GeoUtils.circleToBBox(centerLat, centerLon, radius);
+    if (lonMax - centerLon < 90 && centerLon - lonMin < 90 && /* box is not wrapping around the world */
+        box.maxLon - box.minLon < 90 && /* circle is not wrapping around the world */
+        box.crossesDateline() == false) /* or crossing dateline! */ {
+      // ok
+    } else {
+      return false;
+    }
+    
+    if ((centerLat >= latMin && centerLat <= latMax) || (centerLon >= lonMin && centerLon <= lonMax)) {
+      // e.g. circle itself fully inside / crossing axis
+      return false;
+    }
+    
+    double axisLat = GeoUtils.axisLat(centerLat, radius);
+    assert GeoUtils.isValidLat(axisLat) : "axisLat(" + centerLat + "," + radius + ")=" + axisLat;
+    if (axisLat >= latMin && axisLat <= latMax) {
+      return false; // axis crosser
+    }
+    
+    // point inside
+    if (SloppyMath.haversinMeters(centerLat, centerLon, latMin, lonMin) <= radius ||
+        SloppyMath.haversinMeters(centerLat, centerLon, latMin, lonMax) <= radius ||
+        SloppyMath.haversinMeters(centerLat, centerLon, latMax, lonMin) <= radius ||
+        SloppyMath.haversinMeters(centerLat, centerLon, latMax, lonMax) <= radius) {
+      return false;
+    }
+
+    return true;
   }
 
   static boolean pointInCircle(double centerLat, double centerLon, double radius, double lat, double lon) {
