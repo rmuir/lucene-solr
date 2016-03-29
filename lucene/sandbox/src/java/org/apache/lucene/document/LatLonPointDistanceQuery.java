@@ -210,9 +210,9 @@ final class LatLonPointDistanceQuery extends Query {
                                if (isDisjointAccordingToRob(latitude, longitude, radiusMeters, latMin, latMax, lonMin, lonMax)) {
                                  return Relation.CELL_OUTSIDE_QUERY;
                                }
-                               //if (isDisjoint(latitude, longitude, radiusMeters, box, axisLat, latMin, latMax, lonMin, lonMax)) {
-                               //  return Relation.CELL_OUTSIDE_QUERY;
-                               //}
+                               if (isDisjoint(latitude, longitude, radiusMeters, box, axisLat, latMin, latMax, lonMin, lonMax)) {
+                                 return Relation.CELL_OUTSIDE_QUERY;
+                               }
                                // recurse: its inside our bounding box(es), but not fully, or it wraps around.
                                return Relation.CELL_CROSSES_QUERY;
                              }
