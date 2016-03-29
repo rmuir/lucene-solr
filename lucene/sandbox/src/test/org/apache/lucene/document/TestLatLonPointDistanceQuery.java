@@ -233,14 +233,6 @@ public class TestLatLonPointDistanceQuery extends LuceneTestCase {
   }
   
   static boolean isDisjointAccordingToRob(double centerLat, double centerLon, double radius, double latMin, double latMax, double lonMin, double lonMax) {
-    GeoRect box = GeoUtils.circleToBBox(centerLat, centerLon, radius);
-    if (lonMax - centerLon < 90 && centerLon - lonMin < 90 && /* box is not wrapping around the world */
-        box.crossesDateline() == false) /* or crossing dateline! */ {
-      // ok
-    } else {
-      return false;
-    }
-
     double axisLat = GeoUtils.axisLat(centerLat, radius);
     if ((centerLon >= lonMin && centerLon <= lonMax) || (axisLat >= latMin && axisLat <= latMax)) {
       // e.g. circle itself fully inside / crossing axis

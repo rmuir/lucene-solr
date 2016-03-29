@@ -400,12 +400,6 @@ final class LatLonPointDistanceQuery extends Query {
   }
   
   static boolean isDisjointAccordingToRob(double centerLat, double centerLon, double radius, double latMin, double latMax, double lonMin, double lonMax) {
-    if (lonMax - centerLon < 90 && centerLon - lonMin < 90) { /* rect is not wrapping around the world */
-      // ok
-    } else {
-      return false;
-    }
-
     double axisLat = GeoUtils.axisLat(centerLat, radius);
     if ((centerLon >= lonMin && centerLon <= lonMax) || (axisLat >= latMin && axisLat <= latMax)) {
       // e.g. circle itself fully inside / crossing axis
