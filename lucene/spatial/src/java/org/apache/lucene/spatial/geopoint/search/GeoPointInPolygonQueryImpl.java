@@ -28,13 +28,13 @@ import org.apache.lucene.spatial.util.Polygon;
  */
 final class GeoPointInPolygonQueryImpl extends GeoPointInBBoxQueryImpl {
   private final GeoPointInPolygonQuery polygonQuery;
-  private final Polygon polygon;
+  private final Polygon[] polygons;
 
   GeoPointInPolygonQueryImpl(final String field, final TermEncoding termEncoding, final GeoPointInPolygonQuery q,
                              final double minLat, final double maxLat, final double minLon, final double maxLon) {
     super(field, termEncoding, minLat, maxLat, minLon, maxLon);
     this.polygonQuery = Objects.requireNonNull(q);
-    this.polygon = Objects.requireNonNull(q.polygon);
+    this.polygons = Objects.requireNonNull(q.polygons);
   }
 
   @Override
@@ -58,12 +58,12 @@ final class GeoPointInPolygonQueryImpl extends GeoPointInBBoxQueryImpl {
 
     @Override
     protected boolean cellCrosses(final double minLat, final double maxLat, final double minLon, final double maxLon) {
-      return polygon.crosses(minLat, maxLat, minLon, maxLon);
+      return Polygon.crosses(polygons, minLat, maxLat, minLon, maxLon);
     }
 
     @Override
     protected boolean cellWithin(final double minLat, final double maxLat, final double minLon, final double maxLon) {
-      return polygon.contains(minLat, maxLat, minLon, maxLon);
+      return Polygon.contains(polygons, minLat, maxLat, minLon, maxLon);
     }
 
     @Override
@@ -81,7 +81,7 @@ final class GeoPointInPolygonQueryImpl extends GeoPointInBBoxQueryImpl {
      */
     @Override
     protected boolean postFilter(final double lat, final double lon) {
-      return polygon.contains(lat, lon);
+      return Polygon.contains(polygons, lat, lon);
     }
   }
 

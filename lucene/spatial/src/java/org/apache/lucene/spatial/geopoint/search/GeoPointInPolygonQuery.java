@@ -16,10 +16,13 @@
  */
 package org.apache.lucene.spatial.geopoint.search;
 
+import java.util.Arrays;
+
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField.TermEncoding;
 import org.apache.lucene.spatial.util.GeoEncodingUtils;
+import org.apache.lucene.spatial.util.GeoRect;
 import org.apache.lucene.spatial.util.Polygon;
 
 /** Implements a simple point in polygon query on a GeoPoint field. This is based on
@@ -36,26 +39,26 @@ import org.apache.lucene.spatial.util.Polygon;
  *    1.  The polygon coordinates need to be in either clockwise or counter-clockwise order.
  *    2.  The polygon must not be self-crossing, otherwise the query may result in unexpected behavior
  *    3.  All latitude/longitude values must be in decimal degrees.
- *    4.  Complex computational geometry (e.g., dateline wrapping, polygon with holes) is not supported
+ *    4.  Complex computational geometry (e.g., dateline wrapping) is not supported
  *    5.  For more advanced GeoSpatial indexing and query operations see spatial module
  *
  * @lucene.experimental
  */
 public final class GeoPointInPolygonQuery extends GeoPointInBBoxQuery {
-  protected final Polygon polygon;
+  protected final Polygon[] polygons;
 
   /** 
    * Constructs a new GeoPolygonQuery that will match encoded {@link org.apache.lucene.spatial.geopoint.document.GeoPointField} terms
-   * that fall within or on the boundary of the polygon defined by the input parameters. 
+   * that fall within or on the boundary of the polygons defined by the input parameters. 
    */
-  public GeoPointInPolygonQuery(final String field, Polygon polygon) {
-    this(field, TermEncoding.PREFIX, polygon);
+  public GeoPointInPolygonQuery(String field, Polygon... polygons) {
+    this(field, TermEncoding.PREFIX, polygons);
   }
 
   /**
    * Constructs a new GeoPolygonQuery that will match encoded {@link org.apache.lucene.spatial.geopoint.document.GeoPointField} terms
    * that fall within or on the boundary of the polygon defined by the input parameters.
-   * @deprecated Use {@link #GeoPointInPolygonQuery(String, Polygon)}.
+   * @deprecated Use {@link #GeoPointInPolygonQuery(String, Polygon[])}.
    */
   @Deprecated
   public GeoPointInPolygonQuery(final String field, final double[] polyLats, final double[] polyLons) {
@@ -65,7 +68,7 @@ public final class GeoPointInPolygonQuery extends GeoPointInBBoxQuery {
   /**
    * Constructs a new GeoPolygonQuery that will match encoded {@link org.apache.lucene.spatial.geopoint.document.GeoPointField} terms
    * that fall within or on the boundary of the polygon defined by the input parameters.
-   * @deprecated Use {@link #GeoPointInPolygonQuery(String, TermEncoding, Polygon)} instead.
+   * @deprecated Use {@link #GeoPointInPolygonQuery(String, TermEncoding, Polygon[])} instead.
    */
   @Deprecated
   public GeoPointInPolygonQuery(final String field, final TermEncoding termEncoding, final double[] polyLats, final double[] polyLons) {
@@ -76,9 +79,14 @@ public final class GeoPointInPolygonQuery extends GeoPointInBBoxQuery {
    * Constructs a new GeoPolygonQuery that will match encoded {@link org.apache.lucene.spatial.geopoint.document.GeoPointField} terms
    * that fall within or on the boundary of the polygon defined by the input parameters. 
    */
-  public GeoPointInPolygonQuery(final String field, TermEncoding termEncoding, Polygon polygon) {
-    super(field, termEncoding, polygon.minLat, polygon.maxLat, polygon.minLon, polygon.maxLon);
-    this.polygon = polygon;
+  public GeoPointInPolygonQuery(String field, TermEncoding termEncoding, Polygon... polygons) {
+    this(field, termEncoding, Polygon.getBoundingBox(polygons), polygons);
+  }
+  
+  // internal constructor
+  private GeoPointInPolygonQuery(String field, TermEncoding termEncoding, GeoRect boundingBox, Polygon... polygons) {
+    super(field, termEncoding, boundingBox.minLat, boundingBox.maxLat, boundingBox.minLon, boundingBox.maxLon);
+    this.polygons = polygons.clone();
   }
 
   /** throw exception if trying to change rewrite method */
@@ -91,7 +99,7 @@ public final class GeoPointInPolygonQuery extends GeoPointInBBoxQuery {
   public int hashCode() {
     final int prime = 31;
     int result = super.hashCode();
-    result = prime * result + polygon.hashCode();
+    result = prime * result + Arrays.hashCode(polygons);
     return result;
   }
 
@@ -101,7 +109,7 @@ public final class GeoPointInPolygonQuery extends GeoPointInBBoxQuery {
     if (!super.equals(obj)) return false;
     if (getClass() != obj.getClass()) return false;
     GeoPointInPolygonQuery other = (GeoPointInPolygonQuery) obj;
-    if (!polygon.equals(other.polygon)) return false;
+    if (!Arrays.equals(polygons, other.polygons)) return false;
     return true;
   }
 
@@ -117,15 +125,15 @@ public final class GeoPointInPolygonQuery extends GeoPointInBBoxQuery {
       sb.append(':');
     }
     sb.append(" Polygon: ");
-    sb.append(polygon.toString());
+    sb.append(Arrays.toString(polygons));
 
     return sb.toString();
   }
 
   /**
-   * API utility method for returning the polygon
+   * API utility method for returning copy of the polygon array
    */
-  public Polygon getPolygon() {
-    return polygon;
+  public Polygon[] getPolygons() {
+    return polygons.clone();
   }
 }

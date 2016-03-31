@@ -57,8 +57,8 @@ public class TestLegacyGeoPointQuery extends BaseGeoPointTestCase {
   }
 
   @Override
-  protected Query newPolygonQuery(String field, Polygon polygon) {
-    return new GeoPointInPolygonQuery(field, TermEncoding.NUMERIC, polygon);
+  protected Query newPolygonQuery(String field, Polygon... polygons) {
+    return new GeoPointInPolygonQuery(field, TermEncoding.NUMERIC, polygons);
   }
 
   // legacy encoding is too slow somehow for this random test, its not up to the task.

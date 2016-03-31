@@ -294,6 +294,78 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
     dir.close();
   }
   
+  /** test we can search for a polygon with a hole (but still includes the doc) */
+  public void testPolygonHole() throws Exception {
+    Directory dir = newDirectory();
+    RandomIndexWriter writer = new RandomIndexWriter(random(), dir);
+
+    // add a doc with a point
+    Document document = new Document();
+    addPointToDoc("field", document, 18.313694, -65.227444);
+    writer.addDocument(document);
+    
+    // search and verify we found our doc
+    IndexReader reader = writer.getReader();
+    IndexSearcher searcher = newSearcher(reader);
+    Polygon inner = new Polygon(new double[] { 18.5, 18.5, 18.7, 18.7, 18.5 },
+                                new double[] { -65.7, -65.4, -65.4, -65.7, -65.7 });
+    Polygon outer = new Polygon(new double[] { 18, 18, 19, 19, 18 },
+                                new double[] { -66, -65, -65, -66, -66 }, inner);
+    assertEquals(1, searcher.count(newPolygonQuery("field", outer)));
+
+    reader.close();
+    writer.close();
+    dir.close();
+  }
+  
+  /** test we can search for a polygon with a hole (that excludes the doc) */
+  public void testPolygonHoleExcludes() throws Exception {
+    Directory dir = newDirectory();
+    RandomIndexWriter writer = new RandomIndexWriter(random(), dir);
+
+    // add a doc with a point
+    Document document = new Document();
+    addPointToDoc("field", document, 18.313694, -65.227444);
+    writer.addDocument(document);
+    
+    // search and verify we found our doc
+    IndexReader reader = writer.getReader();
+    IndexSearcher searcher = newSearcher(reader);
+    Polygon inner = new Polygon(new double[] { 18.2, 18.2, 18.4, 18.4, 18.2 },
+                                new double[] { -65.3, -65.2, -65.2, -65.3, -65.3 });
+    Polygon outer = new Polygon(new double[] { 18, 18, 19, 19, 18 },
+                                new double[] { -66, -65, -65, -66, -66 }, inner);
+    assertEquals(0, searcher.count(newPolygonQuery("field", outer)));
+
+    reader.close();
+    writer.close();
+    dir.close();
+  }
+  
+  /** test we can search for a multi-polygon */
+  public void testMultiPolygonBasics() throws Exception {
+    Directory dir = newDirectory();
+    RandomIndexWriter writer = new RandomIndexWriter(random(), dir);
+
+    // add a doc with a point
+    Document document = new Document();
+    addPointToDoc("field", document, 18.313694, -65.227444);
+    writer.addDocument(document);
+    
+    // search and verify we found our doc
+    IndexReader reader = writer.getReader();
+    IndexSearcher searcher = newSearcher(reader);
+    Polygon a = new Polygon(new double[] { 28, 28, 29, 29, 28 },
+                           new double[] { -56, -55, -55, -56, -56 });
+    Polygon b = new Polygon(new double[] { 18, 18, 19, 19, 18 },
+                            new double[] { -66, -65, -65, -66, -66 });
+    assertEquals(1, searcher.count(newPolygonQuery("field", a, b)));
+
+    reader.close();
+    writer.close();
+    dir.close();
+  }
+  
   /** null field name not allowed */
   public void testPolygonNullField() {
     IllegalArgumentException expected = expectThrows(IllegalArgumentException.class, () -> {
@@ -660,7 +732,7 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
 
   protected abstract Query newDistanceQuery(String field, double centerLat, double centerLon, double radiusMeters);
 
-  protected abstract Query newPolygonQuery(String field, Polygon polygon);
+  protected abstract Query newPolygonQuery(String field, Polygon... polygon);
 
   static final boolean rectContainsPoint(GeoRect rect, double pointLat, double pointLon) {
     assert Double.isNaN(pointLat) == false;

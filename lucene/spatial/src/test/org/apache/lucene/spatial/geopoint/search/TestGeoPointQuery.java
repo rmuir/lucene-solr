@@ -57,8 +57,8 @@ public class TestGeoPointQuery extends BaseGeoPointTestCase {
   }
 
   @Override
-  protected Query newPolygonQuery(String field, Polygon polygon) {
-    return new GeoPointInPolygonQuery(field, TermEncoding.PREFIX, polygon);
+  protected Query newPolygonQuery(String field, Polygon... polygons) {
+    return new GeoPointInPolygonQuery(field, TermEncoding.PREFIX, polygons);
   }
 
 }

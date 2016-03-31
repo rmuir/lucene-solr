@@ -39,8 +39,8 @@ public class TestLatLonPointQueries extends BaseGeoPointTestCase {
   }
 
   @Override
-  protected Query newPolygonQuery(String field, Polygon polygon) {
-    return LatLonPoint.newPolygonQuery(field, polygon);
+  protected Query newPolygonQuery(String field, Polygon... polygons) {
+    return LatLonPoint.newPolygonQuery(field, polygons);
   }
 
   @Override

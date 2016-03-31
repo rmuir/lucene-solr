@@ -18,7 +18,10 @@ package org.apache.lucene.spatial.util;
 
 import java.util.Arrays;
 
-/** @lucene.experimental */
+/** 
+ * Represents a closed polygon on the earth's surface.
+ * @lucene.experimental 
+ */
 public final class Polygon {
   private final double[] polyLats;
   private final double[] polyLons;
@@ -35,6 +38,9 @@ public final class Polygon {
   
   // TODO: we could also compute the maximal inner bounding box, to make relations faster to compute?
   
+  /** 
+   * Creates a new Polygon from the supplied latitude/longitude array, and optionally any holes.
+   */
   public Polygon(double[] polyLats, double[] polyLons, Polygon... holes) {
     if (polyLats == null) {
       throw new IllegalArgumentException("polyLats must not be null");
