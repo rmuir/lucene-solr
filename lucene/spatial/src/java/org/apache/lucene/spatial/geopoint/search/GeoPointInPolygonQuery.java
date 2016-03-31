@@ -16,14 +16,11 @@
  */
 package org.apache.lucene.spatial.geopoint.search;
 
-import java.util.Arrays;
-
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField.TermEncoding;
 import org.apache.lucene.spatial.util.GeoEncodingUtils;
-import org.apache.lucene.spatial.util.GeoRect;
-import org.apache.lucene.spatial.util.GeoUtils;
+import org.apache.lucene.spatial.util.Polygon;
 
 /** Implements a simple point in polygon query on a GeoPoint field. This is based on
  * {@code GeoPointInBBoxQueryImpl} and is implemented using a
@@ -45,35 +42,43 @@ import org.apache.lucene.spatial.util.GeoUtils;
  * @lucene.experimental
  */
 public final class GeoPointInPolygonQuery extends GeoPointInBBoxQuery {
-  // polygon position arrays - this avoids the use of any objects or
-  // or geo library dependencies
-  /** array of y (latitude) values (in degrees) */
-  protected final double[] polyLats;
-  /** array of x (longitude) values (in degrees) */
-  protected final double[] polyLons;
+  protected final Polygon polygon;
+
+  /** 
+   * Constructs a new GeoPolygonQuery that will match encoded {@link org.apache.lucene.spatial.geopoint.document.GeoPointField} terms
+   * that fall within or on the boundary of the polygon defined by the input parameters. 
+   */
+  public GeoPointInPolygonQuery(final String field, Polygon polygon) {
+    this(field, TermEncoding.PREFIX, polygon);
+  }
 
   /**
    * Constructs a new GeoPolygonQuery that will match encoded {@link org.apache.lucene.spatial.geopoint.document.GeoPointField} terms
    * that fall within or on the boundary of the polygon defined by the input parameters.
+   * @deprecated Use {@link #GeoPointInPolygonQuery(String, Polygon)}.
    */
+  @Deprecated
   public GeoPointInPolygonQuery(final String field, final double[] polyLats, final double[] polyLons) {
-    this(field, TermEncoding.PREFIX, GeoUtils.polyToBBox(polyLats, polyLons), polyLats, polyLons);
+    this(field, TermEncoding.PREFIX, polyLats, polyLons);
   }
 
   /**
    * Constructs a new GeoPolygonQuery that will match encoded {@link org.apache.lucene.spatial.geopoint.document.GeoPointField} terms
    * that fall within or on the boundary of the polygon defined by the input parameters.
+   * @deprecated Use {@link #GeoPointInPolygonQuery(String, TermEncoding, Polygon)} instead.
    */
+  @Deprecated
   public GeoPointInPolygonQuery(final String field, final TermEncoding termEncoding, final double[] polyLats, final double[] polyLons) {
-    this(field, termEncoding, GeoUtils.polyToBBox(polyLats, polyLons), polyLats, polyLons);
+    this(field, termEncoding, new Polygon(polyLats, polyLons));
   }
 
-  /** Common constructor, used only internally. */
-  private GeoPointInPolygonQuery(final String field, TermEncoding termEncoding, GeoRect bbox, final double[] polyLats, final double[] polyLons) {
-    super(field, termEncoding, bbox.minLat, bbox.maxLat, bbox.minLon, bbox.maxLon);
-    GeoUtils.checkPolygon(polyLats,  polyLons);
-    this.polyLons = polyLons;
-    this.polyLats = polyLats;
+  /** 
+   * Constructs a new GeoPolygonQuery that will match encoded {@link org.apache.lucene.spatial.geopoint.document.GeoPointField} terms
+   * that fall within or on the boundary of the polygon defined by the input parameters. 
+   */
+  public GeoPointInPolygonQuery(final String field, TermEncoding termEncoding, Polygon polygon) {
+    super(field, termEncoding, polygon.minLat, polygon.maxLat, polygon.minLon, polygon.maxLon);
+    this.polygon = polygon;
   }
 
   /** throw exception if trying to change rewrite method */
@@ -83,32 +88,26 @@ public final class GeoPointInPolygonQuery extends GeoPointInBBoxQuery {
   }
 
   @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    if (!super.equals(o)) return false;
-
-    GeoPointInPolygonQuery that = (GeoPointInPolygonQuery) o;
-
-    if (!Arrays.equals(polyLats, that.polyLats)) return false;
-    if (!Arrays.equals(polyLons, that.polyLons)) return false;
-
-    return true;
+  public int hashCode() {
+    final int prime = 31;
+    int result = super.hashCode();
+    result = prime * result + polygon.hashCode();
+    return result;
   }
 
   @Override
-  public int hashCode() {
-    int result = super.hashCode();
-    result = 31 * result + Arrays.hashCode(polyLats);
-    result = 31 * result + Arrays.hashCode(polyLons);
-    return result;
+  public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (!super.equals(obj)) return false;
+    if (getClass() != obj.getClass()) return false;
+    GeoPointInPolygonQuery other = (GeoPointInPolygonQuery) obj;
+    if (!polygon.equals(other.polygon)) return false;
+    return true;
   }
 
   /** print out this polygon query */
   @Override
   public String toString(String field) {
-    assert polyLats.length == polyLons.length;
-
     final StringBuilder sb = new StringBuilder();
     sb.append(getClass().getSimpleName());
     sb.append(':');
@@ -117,31 +116,16 @@ public final class GeoPointInPolygonQuery extends GeoPointInBBoxQuery {
       sb.append(getField());
       sb.append(':');
     }
-    sb.append(" Points: ");
-    for (int i=0; i<polyLats.length; ++i) {
-      sb.append("[")
-          .append(polyLats[i])
-          .append(", ")
-          .append(polyLons[i])
-          .append("] ");
-    }
+    sb.append(" Polygon: ");
+    sb.append(polygon.toString());
 
     return sb.toString();
   }
 
   /**
-   * API utility method for returning the array of longitudinal values for this GeoPolygon
-   * The returned array is not a copy so do not change it!
+   * API utility method for returning the polygon
    */
-  public double[] getLons() {
-    return this.polyLons;
-  }
-
-  /**
-   * API utility method for returning the array of latitudinal values for this GeoPolygon
-   * The returned array is not a copy so do not change it!
-   */
-  public double[] getLats() {
-    return this.polyLats;
+  public Polygon getPolygon() {
+    return polygon;
   }
 }

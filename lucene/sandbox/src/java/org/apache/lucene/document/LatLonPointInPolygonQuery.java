@@ -17,7 +17,6 @@
 package org.apache.lucene.document;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 import org.apache.lucene.index.PointValues.IntersectVisitor;
 import org.apache.lucene.index.PointValues.Relation;
@@ -40,9 +39,7 @@ import org.apache.lucene.util.BitSet;
 import org.apache.lucene.util.DocIdSetBuilder;
 import org.apache.lucene.util.FixedBitSet;
 import org.apache.lucene.util.SparseFixedBitSet;
-import org.apache.lucene.spatial.util.GeoRect;
-import org.apache.lucene.spatial.util.GeoRelationUtils;
-import org.apache.lucene.spatial.util.GeoUtils;
+import org.apache.lucene.spatial.util.Polygon;
 
 /** Finds all previously indexed points that fall within the specified polygon.
  *
@@ -52,29 +49,19 @@ import org.apache.lucene.spatial.util.GeoUtils;
 
 final class LatLonPointInPolygonQuery extends Query {
   final String field;
-  final double minLat;
-  final double maxLat;
-  final double minLon;
-  final double maxLon;
-  final double[] polyLats;
-  final double[] polyLons;
+  final Polygon polygon;
 
   /** The lats/lons must be clockwise or counter-clockwise. */
-  public LatLonPointInPolygonQuery(String field, double[] polyLats, double[] polyLons) {
+  public LatLonPointInPolygonQuery(String field, Polygon polygon) {
     if (field == null) {
       throw new IllegalArgumentException("field must not be null");
     }
-    GeoUtils.checkPolygon(polyLats,  polyLons);
+    if (polygon == null) {
+      throw new IllegalArgumentException("polygon must not be null");
+    }
     this.field = field;
-    this.polyLats = polyLats;
-    this.polyLons = polyLons;
-
+    this.polygon = polygon;
     // TODO: we could also compute the maximal inner bounding box, to make relations faster to compute?
-    GeoRect box = GeoUtils.polyToBBox(polyLats, polyLons);
-    this.minLon = box.minLon;
-    this.maxLon = box.maxLon;
-    this.minLat = box.minLat;
-    this.maxLat = box.maxLat;
   }
 
   @Override
@@ -131,16 +118,12 @@ final class LatLonPointInPolygonQuery extends Query {
                              double cellMaxLat = LatLonPoint.decodeLatitude(maxPackedValue, 0);
                              double cellMaxLon = LatLonPoint.decodeLongitude(maxPackedValue, Integer.BYTES);
 
-                             if (cellMinLat <= minLat && cellMaxLat >= maxLat && cellMinLon <= minLon && cellMaxLon >= maxLon) {
+                             if (cellMinLat <= polygon.minLat && cellMaxLat >= polygon.maxLat && cellMinLon <= polygon.minLon && cellMaxLon >= polygon.maxLon) {
                                // Cell fully encloses the query
                                return Relation.CELL_CROSSES_QUERY;
-                             } else  if (GeoRelationUtils.rectWithinPolyPrecise(cellMinLat, cellMaxLat, cellMinLon, cellMaxLon,
-                                                                                polyLats, polyLons,
-                                                                                minLat, maxLat, minLon, maxLon)) {
+                             } else if (polygon.contains(cellMinLat, cellMaxLat, cellMinLon, cellMaxLon)) {
                                return Relation.CELL_INSIDE_QUERY;
-                             } else if (GeoRelationUtils.rectCrossesPolyPrecise(cellMinLat, cellMaxLat, cellMinLon, cellMaxLon,
-                                                                                polyLats, polyLons,
-                                                                                minLat, maxLat, minLon, maxLon)) {
+                             } else if (polygon.crosses(cellMinLat, cellMaxLat, cellMinLon, cellMaxLon)) {
                                return Relation.CELL_CROSSES_QUERY;
                              } else {
                                return Relation.CELL_OUTSIDE_QUERY;
@@ -156,6 +139,9 @@ final class LatLonPointInPolygonQuery extends Query {
 
         // return two-phase iterator using docvalues to postfilter candidates
         SortedNumericDocValues docValues = DocValues.getSortedNumeric(reader, field);
+        
+        // TODO: make this fancier, but currently linear with number of vertices
+        final float matchCost = 20 * (polygon.getPolyLats().length + polygon.getHoles().length);
         TwoPhaseIterator iterator = new TwoPhaseIterator(disi) {
           @Override
           public boolean matches() throws IOException {
@@ -169,7 +155,7 @@ final class LatLonPointInPolygonQuery extends Query {
                 long encoded = docValues.valueAt(i);
                 double docLatitude = LatLonPoint.decodeLatitude((int)(encoded >> 32));
                 double docLongitude = LatLonPoint.decodeLongitude((int)(encoded & 0xFFFFFFFF));
-                if (GeoRelationUtils.pointInPolygon(polyLats, polyLons, docLatitude, docLongitude)) {
+                if (polygon.contains(docLatitude, docLongitude)) {
                   return true;
                 }
               }
@@ -179,7 +165,7 @@ final class LatLonPointInPolygonQuery extends Query {
 
           @Override
           public float matchCost() {
-            return 20 * polyLons.length; // TODO: make this fancier, but currently linear with number of vertices
+            return matchCost;
           }
         };
         return new ConstantScoreScorer(this, score(), iterator);
@@ -191,58 +177,28 @@ final class LatLonPointInPolygonQuery extends Query {
     return field;
   }
 
-  public double getMinLat() {
-    return minLat;
-  }
-
-  public double getMaxLat() {
-    return maxLat;
-  }
-
-  public double getMinLon() {
-    return minLon;
-  }
-
-  public double getMaxLon() {
-    return maxLon;
-  }
-
-  public double[] getPolyLats() {
-    return polyLats;
-  }
-
-  public double[] getPolyLons() {
-    return polyLons;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    if (!super.equals(o)) return false;
-
-    LatLonPointInPolygonQuery that = (LatLonPointInPolygonQuery) o;
-
-    if (field.equals(that.field) == false) {
-      return false;
-    }
-    if (Arrays.equals(polyLons, that.polyLons) == false) {
-      return false;
-    }
-    if (Arrays.equals(polyLats, that.polyLats) == false) {
-      return false;
-    }
-
-    return true;
+  public Polygon getPolygon() {
+    return polygon;
   }
 
   @Override
   public int hashCode() {
+    final int prime = 31;
     int result = super.hashCode();
-    result = 31 * result + field.hashCode();
-    result = 31 * result + Arrays.hashCode(polyLons);
-    result = 31 * result + Arrays.hashCode(polyLats);
+    result = prime * result + field.hashCode();
+    result = prime * result + polygon.hashCode();
     return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (!super.equals(obj)) return false;
+    if (getClass() != obj.getClass()) return false;
+    LatLonPointInPolygonQuery other = (LatLonPointInPolygonQuery) obj;
+    if (!field.equals(other.field)) return false;
+    if (!polygon.equals(other.polygon)) return false;
+    return true;
   }
 
   @Override
@@ -255,14 +211,7 @@ final class LatLonPointInPolygonQuery extends Query {
       sb.append(this.field);
       sb.append(':');
     }
-    sb.append(" Points: ");
-    for (int i=0; i<polyLons.length; ++i) {
-      sb.append("[")
-        .append(polyLats[i])
-        .append(", ")
-        .append(polyLons[i])
-        .append("] ");
-    }
+    sb.append(polygon.toString());
     return sb.toString();
   }
 }
