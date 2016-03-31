@@ -70,9 +70,9 @@ public final class Polygon {
         throw new IllegalArgumentException("holes may not contain holes: polygons may not nest.");
       }
     }
-    this.polyLats = polyLats;
-    this.polyLons = polyLons;
-    this.holes = holes;
+    this.polyLats = polyLats.clone();
+    this.polyLons = polyLons.clone();
+    this.holes = holes.clone();
 
     // compute bounding box
     double minLat = Double.POSITIVE_INFINITY;
@@ -92,6 +92,7 @@ public final class Polygon {
     this.maxLon = maxLon;
   }
   
+  /** Returns true if the point is contained within this polygon */
   public boolean contains(double latitude, double longitude) {
     // check bounding box
     if (latitude < minLat || latitude > maxLat || longitude < minLon || longitude > maxLon) {
@@ -240,6 +241,36 @@ public final class Polygon {
     }
     
     return new GeoRect(minLat, maxLat, minLon, maxLon);
+  }
+  
+  /** Helper for multipolygon logic: returns true if any of the supplied polygons contain the point */
+  public static boolean contains(Polygon[] polygons, double latitude, double longitude) {
+    for (Polygon polygon : polygons) {
+      if (polygon.contains(latitude, longitude)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  /** Helper for multipolygon logic: returns true if any of the supplied polygons contain the rectangle */
+  public static boolean contains(Polygon[] polygons, double minLat, double maxLat, double minLon, double maxLon) {
+    for (Polygon polygon : polygons) {
+      if (polygon.contains(minLat, maxLat, minLon, maxLon)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  /** Helper for multipolygon logic: returns true if any of the supplied polygons crosses the rectangle */
+  public static boolean crosses(Polygon[] polygons, double minLat, double maxLat, double minLon, double maxLon) {
+    for (Polygon polygon : polygons) {
+      if (polygon.crosses(minLat, maxLat, minLon, maxLon)) {
+        return true;
+      }
+    }
+    return false;
   }
   
   @Override
