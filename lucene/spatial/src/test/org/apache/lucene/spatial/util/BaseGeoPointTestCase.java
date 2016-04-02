@@ -1230,16 +1230,16 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
     assertEquals(8, s.count(newRectQuery(FIELD_NAME, rect.minLat, rect.maxLat, Math.nextDown(rect.minLon), rect.maxLon)));
     assertEquals(8, s.count(newRectQuery(FIELD_NAME, rect.minLat, rect.maxLat, rect.minLon, Math.nextUp(rect.maxLon))));
     
-    // now shrink 1 ulp in each direction
+    // now shrink 1 ulp in each direction: it should not include bogus stuff
     assumeFalse("can't shrink box, its too small already", rect.minLat ==   90);
     assumeFalse("can't shrink box, its too small already", rect.maxLat ==  -90);
     assumeFalse("can't shrink box, its too small already", rect.minLon ==  180);
     assumeFalse("can't shrink box, its too small already", rect.maxLon == -180);
     // note we put points on "sides" not just "corners" so we just shrink all 4 at once for now: it should exclude all points!
     assertEquals(0, s.count(newRectQuery(FIELD_NAME, Math.nextUp(rect.minLat), 
-                                            Math.nextDown(rect.maxLat), 
-                                            Math.nextUp(rect.minLon), 
-                                            Math.nextDown(rect.maxLon))));
+                                                     Math.nextDown(rect.maxLat), 
+                                                     Math.nextUp(rect.minLon), 
+                                                     Math.nextDown(rect.maxLon))));
     r.close();
     w.close();
     dir.close();
