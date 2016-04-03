@@ -165,13 +165,7 @@ final class LatLonPointInPolygonQuery extends Query {
                              double cellMaxLat = LatLonPoint.decodeLatitude(maxPackedValue, 0);
                              double cellMaxLon = LatLonPoint.decodeLongitude(maxPackedValue, Integer.BYTES);
 
-                             if (Polygon.contains(polygons, cellMinLat, cellMaxLat, cellMinLon, cellMaxLon)) {
-                               return Relation.CELL_INSIDE_QUERY;
-                             } else if (Polygon.crosses(polygons, cellMinLat, cellMaxLat, cellMinLon, cellMaxLon)) {
-                               return Relation.CELL_CROSSES_QUERY;
-                             } else {
-                               return Relation.CELL_OUTSIDE_QUERY;
-                             }
+                             return Polygon.relate(polygons, cellMinLat, cellMaxLat, cellMinLon, cellMaxLon);
                            }
                          });
 
