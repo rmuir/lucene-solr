@@ -145,6 +145,10 @@ public final class Polygon {
    * Computes whether a rectangle is within a polygon (shared boundaries not allowed)
    */
   public boolean contains(double minLat, double maxLat, double minLon, double maxLon) {
+    // if its not within our bounding box, we don't contain it
+    if (minLat < this.minLat || maxLat > this.maxLat || minLon < this.minLon || maxLon > this.maxLon) {
+      return false;
+    }
     // check if rectangle crosses poly (to handle concave/pacman polys), then check that all 4 corners
     // are contained
     boolean contains = crosses(minLat, maxLat, minLon, maxLon) == false &&
@@ -156,7 +160,7 @@ public final class Polygon {
     if (contains) {
       // if we intersect with any hole, game over
       for (Polygon hole : holes) {
-        if (hole.crosses(minLat, maxLat, minLon, maxLon) || hole.contains(minLat, maxLat, minLon, maxLon)) {
+        if (hole.contains(minLat, maxLat, minLon, maxLon) || hole.crosses(minLat, maxLat, minLon, maxLon)) {
           return false;
         }
       }
