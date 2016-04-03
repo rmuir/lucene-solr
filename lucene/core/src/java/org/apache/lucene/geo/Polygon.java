@@ -143,64 +143,41 @@ public final class Polygon {
     }
   }
   
+  /** Returns relation to the provided rectangle */
   public Relation relate(double minLat, double maxLat, double minLon, double maxLon) {
-    if (contains(minLat, maxLat, minLon, maxLon)) {
-      return Relation.CELL_INSIDE_QUERY;
-    } else if (crosses(minLat, maxLat, minLon, maxLon)) {
-      return Relation.CELL_CROSSES_QUERY;
-    } else {
-      return Relation.CELL_OUTSIDE_QUERY;
-    }
-  }
-
-  /**
-   * Computes whether a rectangle is within a polygon (shared boundaries not allowed)
-   */
-  private boolean contains(double minLat, double maxLat, double minLon, double maxLon) {
-    // if its not within our bounding box, we don't contain it
-    if (minLat < this.minLat || maxLat > this.maxLat || minLon < this.minLon || maxLon > this.maxLon) {
-      return false;
-    }
-    // check if rectangle crosses poly (to handle concave/pacman polys), then check that all 4 corners
-    // are contained
-    boolean contains = crosses(minLat, maxLat, minLon, maxLon) == false &&
-                       contains(minLat, minLon) &&
-                       contains(minLat, maxLon) &&
-                       contains(maxLat, maxLon) &&
-                       contains(maxLat, minLon);
-
-    if (contains) {
-      // if we intersect with any hole, game over
-      for (Polygon hole : holes) {
-        if (hole.contains(minLat, maxLat, minLon, maxLon) || hole.crosses(minLat, maxLat, minLon, maxLon)) {
-          return false;
-        }
-      }
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  /**
-   * Convenience method for accurately computing whether a rectangle crosses a poly.
-   */
-  private boolean crosses(double minLat, double maxLat, final double minLon, final double maxLon) {
     // if the bounding boxes are disjoint then the shape does not cross
     if (maxLon < this.minLon || minLon > this.maxLon || maxLat < this.minLat || minLat > this.maxLat) {
-      return false;
+      return Relation.CELL_OUTSIDE_QUERY;
     }
     // if the rectangle fully encloses us, we cross.
     if (minLat <= this.minLat && maxLat >= this.maxLat && minLon <= this.minLon && maxLon >= this.maxLon) {
-      return true;
+      return Relation.CELL_CROSSES_QUERY;
     }
-    // if we cross any hole, we cross
+    // check any holes
     for (Polygon hole : holes) {
-      if (hole.crosses(minLat, maxLat, minLon, maxLon)) {
-        return true;
+      Relation holeRelation = hole.relate(minLat, maxLat, minLon, maxLon);
+      if (holeRelation == Relation.CELL_CROSSES_QUERY) {
+        return Relation.CELL_CROSSES_QUERY;
+      } else if (holeRelation == Relation.CELL_INSIDE_QUERY) {
+        return Relation.CELL_OUTSIDE_QUERY;
       }
     }
+    // we cross
+    if (crossesInternal(minLat, maxLat, minLon, maxLon)) {
+      return Relation.CELL_CROSSES_QUERY;
+    }
+    
+    // we don't cross, and its not outside our bounding box, check corners
+    if (minLat >= this.minLat && maxLat <= this.maxLat && minLon >= this.minLon && maxLon <= this.maxLon) {
+      if (contains(minLat, minLon) && contains(minLat, maxLon) && contains(maxLat, maxLon) && contains(maxLat, minLon)) {
+        return Relation.CELL_INSIDE_QUERY;
+      }
+    }
+    
+    return Relation.CELL_OUTSIDE_QUERY;
+  }
 
+  private boolean crossesInternal(double minLat, double maxLat, final double minLon, final double maxLon) {
     /*
      * Accurately compute (within restrictions of cartesian decimal degrees) whether a rectangle crosses a polygon
      */
