@@ -45,19 +45,20 @@ import org.apache.lucene.util.FixedBitSet;
 // relational operations as rectangle <-> rectangle relations in integer space in log(n) time..
 final class LatLonGrid {
   // must be a power of two!
-  static final int GRID_SIZE = 1<<5;
-  final int minLat;
-  final int maxLat;
-  final int minLon;
-  final int maxLon;
+  private static final int GRID_SIZE = 1<<5;
+  // bounding box of polygons
+  private final int minLat;
+  private final int maxLat;
+  private final int minLon;
+  private final int maxLon;
   // TODO: something more efficient than parallel bitsets? maybe one bitset?
-  final FixedBitSet haveAnswer = new FixedBitSet(GRID_SIZE * GRID_SIZE);
-  final FixedBitSet answer = new FixedBitSet(GRID_SIZE * GRID_SIZE);
+  private final FixedBitSet haveAnswer = new FixedBitSet(GRID_SIZE * GRID_SIZE);
+  private final FixedBitSet answer = new FixedBitSet(GRID_SIZE * GRID_SIZE);
   
-  final long latPerCell;
-  final long lonPerCell;
+  private final long latPerCell; // latitude range per grid cell
+  private final long lonPerCell; // longitude range per grid cell
   
-  final Polygon[] polygons;
+  private final Polygon[] polygons;
   
   LatLonGrid(int minLat, int maxLat, int minLon, int maxLon, Polygon... polygons) {
     this.minLat = minLat;
@@ -70,7 +71,7 @@ final class LatLonGrid {
       throw new IllegalArgumentException("Grid cannot cross the dateline");
     }
     if (minLat > maxLat) {
-      throw new IllegalArgumentException("bogus grid");
+      throw new IllegalArgumentException("bogus bounding box");
     }
     long latitudeRange = maxLat - (long) minLat;
     long longitudeRange = maxLon - (long) minLon;
@@ -78,18 +79,19 @@ final class LatLonGrid {
     // but it prevents edge case bugs.
     latPerCell = latitudeRange / (GRID_SIZE - 1);
     lonPerCell = longitudeRange / (GRID_SIZE - 1);
-    fill(polygons, 0, GRID_SIZE, 0, GRID_SIZE);
+    fill(0, GRID_SIZE, 0, GRID_SIZE);
   }
   
   /** fills a 2D range of grid cells [minLatIndex .. maxLatIndex) X [minLonIndex .. maxLonIndex) */
-  void fill(Polygon[] polygons, int minLatIndex, int maxLatIndex, int minLonIndex, int maxLonIndex) {
-    // grid cells at the edge of the bounding box are typically smaller than normal, because we spill over.
+  private void fill(int minLatIndex, int maxLatIndex, int minLonIndex, int maxLonIndex) {
+    // Math.min because grid cells at the edge of the bounding box are smaller than normal due to spilling.
     long cellMinLat = minLat + (minLatIndex * latPerCell);
     long cellMaxLat = Math.min(maxLat, minLat + (maxLatIndex * latPerCell) - 1);
     long cellMinLon = minLon + (minLonIndex * lonPerCell);
     long cellMaxLon = Math.min(maxLon, minLon + (maxLonIndex * lonPerCell) - 1);
 
-    assert cellMinLat <= maxLat && cellMinLon <= maxLon;
+    assert cellMinLat <= maxLat;
+    assert cellMinLon <= maxLon;
     assert cellMaxLat >= cellMinLat;
     assert cellMaxLon >= cellMinLon;
 
@@ -116,10 +118,10 @@ final class LatLonGrid {
       // grid range crosses our polygon, keep recursing.
       int midLatIndex = (minLatIndex + maxLatIndex) >>> 1;
       int midLonIndex = (minLonIndex + maxLonIndex) >>> 1;
-      fill(polygons, minLatIndex, midLatIndex, minLonIndex, midLonIndex);
-      fill(polygons, minLatIndex, midLatIndex, midLonIndex, maxLonIndex);
-      fill(polygons, midLatIndex, maxLatIndex, minLonIndex, midLonIndex);
-      fill(polygons, midLatIndex, maxLatIndex, midLonIndex, maxLonIndex);
+      fill(minLatIndex, midLatIndex, minLonIndex, midLonIndex);
+      fill(minLatIndex, midLatIndex, midLonIndex, maxLonIndex);
+      fill(midLatIndex, maxLatIndex, minLonIndex, midLonIndex);
+      fill(midLatIndex, maxLatIndex, midLonIndex, maxLonIndex);
     }
   }
   
@@ -137,6 +139,50 @@ final class LatLonGrid {
     double docLatitude = LatLonPoint.decodeLatitude(latitude);
     double docLongitude = LatLonPoint.decodeLongitude(longitude);
     return Polygon.contains(polygons, docLatitude, docLongitude);
+  }
+  
+  /** Returns relation to the provided rectangle */
+  Relation relate(int minLat, int maxLat, int minLon, int maxLon) {
+    return Polygon.relate(polygons, LatLonPoint.decodeLatitude(minLat), 
+                                    LatLonPoint.decodeLatitude(maxLat), 
+                                    LatLonPoint.decodeLongitude(minLon), 
+                                    LatLonPoint.decodeLongitude(maxLon));
+    /*
+    // if the bounding boxes are disjoint then the shape does not cross
+    if (maxLon < this.minLon || minLon > this.maxLon || maxLat < this.minLat || minLat > this.maxLat) {
+      return Relation.CELL_OUTSIDE_QUERY;
+    }
+    // if the rectangle fully encloses us, we cross.
+    if (minLat <= this.minLat && maxLat >= this.maxLat && minLon <= this.minLon && maxLon >= this.maxLon) {
+      return Relation.CELL_CROSSES_QUERY;
+    }
+    // check any holes
+    for (Polygon hole : holes) {
+      Relation holeRelation = hole.relate(minLat, maxLat, minLon, maxLon);
+      if (holeRelation == Relation.CELL_CROSSES_QUERY) {
+        return Relation.CELL_CROSSES_QUERY;
+      } else if (holeRelation == Relation.CELL_INSIDE_QUERY) {
+        return Relation.CELL_OUTSIDE_QUERY;
+      }
+    }
+    // check each corner: if < 4 are present, its cheaper than crossesSlowly
+    int numCorners = numberOfCorners(minLat, maxLat, minLon, maxLon);
+    if (numCorners == 4) {
+      if (crossesSlowly(minLat, maxLat, minLon, maxLon)) {
+        return Relation.CELL_CROSSES_QUERY;
+      }
+      return Relation.CELL_INSIDE_QUERY;
+    } else if (numCorners > 0) {
+      return Relation.CELL_CROSSES_QUERY;
+    }
+    
+    // we cross
+    if (crossesSlowly(minLat, maxLat, minLon, maxLon)) {
+      return Relation.CELL_CROSSES_QUERY;
+    }
+    
+    return Relation.CELL_OUTSIDE_QUERY;
+    */
   }
   
   /** Returns grid index of lat/lon, or -1 if the value is outside of the bounding box. */
