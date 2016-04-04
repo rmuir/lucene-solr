@@ -68,19 +68,23 @@ public final class GeoEncodingUtils {
     return unscaleLat(BitUtil.deinterleave(hash >>> 1));
   }
 
-  private static final long scaleLon(final double val) {
+  /** encode longitude value to quantized internal representation */
+  public static final long scaleLon(final double val) {
     return (long) ((val-MIN_LON_INCL) * LON_SCALE);
   }
 
-  private static final long scaleLat(final double val) {
+  /** encode latitude value to quantized internal representation */
+  public static final long scaleLat(final double val) {
     return (long) ((val-MIN_LAT_INCL) * LAT_SCALE);
   }
 
-  private static final double unscaleLon(final long val) {
+  /** decode longitude value from quantized internal representation */
+  public static final double unscaleLon(final long val) {
     return (val / LON_SCALE) + MIN_LON_INCL;
   }
 
-  private static final double unscaleLat(final long val) {
+  /** decode latitude value from quantized internal representation */
+  public static final double unscaleLat(final long val) {
     return (val / LAT_SCALE) + MIN_LAT_INCL;
   }
 
