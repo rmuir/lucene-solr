@@ -54,7 +54,7 @@ public final class GeoEncodingUtils {
    * encode latitude, longitude geopoint values using morton encoding method
    * https://en.wikipedia.org/wiki/Z-order_curve
    */
-  public static final Long mortonHash(final double lat, final double lon) {
+  public static final long mortonHash(final double lat, final double lon) {
     return BitUtil.interleave(scaleLon(lon), scaleLat(lat));
   }
 
