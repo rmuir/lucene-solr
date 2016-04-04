@@ -141,17 +141,6 @@ final class LatLonGrid {
     return Polygon.contains(polygons, docLatitude, docLongitude);
   }
   
-  /** Returns 1 if we contain the point, -1 if we don't, 0 if we are not sure */
-  int containsQuickly(int latitude, int longitude) {
-    int index = index(latitude, longitude);
-    if (index == -1) {
-      return -1; // outside of bounding box range
-    } else if (haveAnswer.get(index)) {
-      return answer.get(index) ? 1 : -1;
-    }
-    return 0; // indeterminate
-  }
-  
   /** Returns relation to the provided rectangle */
   Relation relate(int minLat, int maxLat, int minLon, int maxLon) {
     // if the bounding boxes are disjoint then the shape does not cross
@@ -160,37 +149,6 @@ final class LatLonGrid {
     }
     // if the rectangle fully encloses us, we cross.
     if (minLat <= this.minLat && maxLat >= this.maxLat && minLon <= this.minLon && maxLon >= this.maxLon) {
-      return Relation.CELL_CROSSES_QUERY;
-    }
-    
-    int on = 0;
-    int off = 0;
-    int p1 = containsQuickly(minLat, minLon);
-    if (p1 > 0) {
-      on++;
-    } else if (p1 < 0) {
-      off++;
-    }
-    int p2 = containsQuickly(minLat, maxLon);
-    if (p2 > 0) {
-      on++;
-    } else if (p2 < 0) {
-      off++;
-    }
-    int p3 = containsQuickly(maxLat, minLon);
-    if (p3 > 0) {
-      on++;
-    } else if (p3 < 0) {
-      off++;
-    }
-    int p4 = containsQuickly(maxLat, maxLon);
-    if (p4 > 0) {
-      on++;
-    } else if (p4 < 0) {
-      off++;
-    }
-    
-    if (on > 0 && off > 0) {
       return Relation.CELL_CROSSES_QUERY;
     }
     
