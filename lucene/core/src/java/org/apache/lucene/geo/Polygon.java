@@ -162,10 +162,10 @@ public final class Polygon {
         return Relation.CELL_OUTSIDE_QUERY;
       }
     }
-    
+    // check each corner: if < 4 are present, its cheaper than crossesSlowly
     int numCorners = numberOfCorners(minLat, maxLat, minLon, maxLon);
     if (numCorners == 4) {
-      if (crossesInternal(minLat, maxLat, minLon, maxLon)) {
+      if (crossesSlowly(minLat, maxLat, minLon, maxLon)) {
         return Relation.CELL_CROSSES_QUERY;
       }
       return Relation.CELL_INSIDE_QUERY;
@@ -174,9 +174,9 @@ public final class Polygon {
     }
     
     // we cross
-    //if (crossesInternal(minLat, maxLat, minLon, maxLon)) {
-    //  return Relation.CELL_CROSSES_QUERY;
-    //}
+    if (crossesSlowly(minLat, maxLat, minLon, maxLon)) {
+      return Relation.CELL_CROSSES_QUERY;
+    }
     
     return Relation.CELL_OUTSIDE_QUERY;
   }
@@ -205,46 +205,51 @@ public final class Polygon {
     return containsCount;
   }
 
-  private boolean crossesInternal(double minLat, double maxLat, final double minLon, final double maxLon) {
+  private boolean crossesSlowly(double minLat, double maxLat, final double minLon, final double maxLon) {
     /*
      * Accurately compute (within restrictions of cartesian decimal degrees) whether a rectangle crosses a polygon
      */
-    final double[][] bbox = new double[][] { {minLon, minLat}, {maxLon, minLat}, {maxLon, maxLat}, {minLon, maxLat}, {minLon, minLat} };
-    final int polyLength = polyLons.length-1;
-    double d, s, t, a1, b1, c1, a2, b2, c2;
-    double x00, y00, x01, y01, x10, y10, x11, y11;
+    final double[] boxX = new double[] { minLon, maxLon, maxLon, minLon, minLon };
+    final double[] boxY = new double[] { minLat, minLat, maxLat, maxLat, minLat };
 
     // computes the intersection point between each bbox edge and the polygon edge
-    for (short b=0; b<4; ++b) {
-      a1 = bbox[b+1][1]-bbox[b][1];
-      b1 = bbox[b][0]-bbox[b+1][0];
-      c1 = a1*bbox[b+1][0] + b1*bbox[b+1][1];
-      for (int p=0; p<polyLength; ++p) {
-        a2 = polyLats[p+1]-polyLats[p];
-        b2 = polyLons[p]-polyLons[p+1];
+    for (int b=0; b<4; ++b) {
+      double a1 = boxY[b+1]-boxY[b];
+      double b1 = boxX[b]-boxX[b+1];
+      double c1 = a1*boxX[b+1] + b1*boxY[b+1];
+      for (int p=0; p<polyLons.length-1; ++p) {
+        double a2 = polyLats[p+1]-polyLats[p];
+        double b2 = polyLons[p]-polyLons[p+1];
         // compute determinant
-        d = a1*b2 - a2*b1;
+        double d = a1*b2 - a2*b1;
         if (d != 0) {
           // lines are not parallel, check intersecting points
-          c2 = a2*polyLons[p+1] + b2*polyLats[p+1];
-          s = (1/d)*(b2*c1 - b1*c2);
-          t = (1/d)*(a1*c2 - a2*c1);
+          double c2 = a2*polyLons[p+1] + b2*polyLats[p+1];
+          double s = (1/d)*(b2*c1 - b1*c2);
+          double t = (1/d)*(a1*c2 - a2*c1);
           // todo TOLERANCE SHOULD MATCH EVERYWHERE this is currently blocked by LUCENE-7165
-          x00 = Math.min(bbox[b][0], bbox[b+1][0]) - ENCODING_TOLERANCE;
-          x01 = Math.max(bbox[b][0], bbox[b+1][0]) + ENCODING_TOLERANCE;
-          y00 = Math.min(bbox[b][1], bbox[b+1][1]) - ENCODING_TOLERANCE;
-          y01 = Math.max(bbox[b][1], bbox[b+1][1]) + ENCODING_TOLERANCE;
-          x10 = Math.min(polyLons[p], polyLons[p+1]) - ENCODING_TOLERANCE;
-          x11 = Math.max(polyLons[p], polyLons[p+1]) + ENCODING_TOLERANCE;
-          y10 = Math.min(polyLats[p], polyLats[p+1]) - ENCODING_TOLERANCE;
-          y11 = Math.max(polyLats[p], polyLats[p+1]) + ENCODING_TOLERANCE;
-          // check whether the intersection point is touching one of the line segments
-          boolean touching = ((x00 == s && y00 == t) || (x01 == s && y01 == t))
-              || ((x10 == s && y10 == t) || (x11 == s && y11 == t));
-          // if line segments are not touching and the intersection point is within the range of either segment
-          if (!(touching || x00 > s || x01 < s || y00 > t || y01 < t || x10 > s || x11 < s || y10 > t || y11 < t)) {
-            return true;
+          double x00 = Math.min(boxX[b], boxX[b+1]) - ENCODING_TOLERANCE;
+          double y00 = Math.min(boxY[b], boxY[b+1]) - ENCODING_TOLERANCE;
+          if ((x00 == s && y00 == t) || x00 > s || y00 > t) {
+            continue; // touching or out of range
           }
+          double x01 = Math.max(boxX[b], boxX[b+1]) + ENCODING_TOLERANCE;
+          double y01 = Math.max(boxY[b], boxY[b+1]) + ENCODING_TOLERANCE;
+          if ((x01 == s && y01 == t) || x01 < s || y01 < t) {
+            continue; // touching or out of range
+          }
+          double x10 = Math.min(polyLons[p], polyLons[p+1]) - ENCODING_TOLERANCE;
+          double y10 = Math.min(polyLats[p], polyLats[p+1]) - ENCODING_TOLERANCE;
+          if ((x10 == s && y10 == t) || x10 > s || y10 > t) {
+            continue; // touching or out of range
+          }
+          double x11 = Math.max(polyLons[p], polyLons[p+1]) + ENCODING_TOLERANCE;
+          double y11 = Math.max(polyLats[p], polyLats[p+1]) + ENCODING_TOLERANCE;
+          if ((x11 == s && y11 == t) || x11 < s || y11 < t) {
+            continue; // touching or out of range
+          }
+          // if line segments are not touching and the intersection point is within the range of either segment
+          return true;
         }
       } // for each poly edge
     } // for each bbox edge
