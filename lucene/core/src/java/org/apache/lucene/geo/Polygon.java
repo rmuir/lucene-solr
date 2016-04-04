@@ -209,14 +209,14 @@ public final class Polygon {
     /*
      * Accurately compute (within restrictions of cartesian decimal degrees) whether a rectangle crosses a polygon
      */
-    final double[] boxX = new double[] { minLon, maxLon, maxLon, minLon, minLon };
-    final double[] boxY = new double[] { minLat, minLat, maxLat, maxLat, minLat };
+    final double[] boxLats = new double[] { minLat, minLat, maxLat, maxLat, minLat };
+    final double[] boxLons = new double[] { minLon, maxLon, maxLon, minLon, minLon };
 
     // computes the intersection point between each bbox edge and the polygon edge
     for (int b=0; b<4; ++b) {
-      double a1 = boxY[b+1]-boxY[b];
-      double b1 = boxX[b]-boxX[b+1];
-      double c1 = a1*boxX[b+1] + b1*boxY[b+1];
+      double a1 = boxLats[b+1]-boxLats[b];
+      double b1 = boxLons[b]-boxLons[b+1];
+      double c1 = a1*boxLons[b+1] + b1*boxLats[b+1];
       for (int p=0; p<polyLons.length-1; ++p) {
         double a2 = polyLats[p+1]-polyLats[p];
         double b2 = polyLons[p]-polyLons[p+1];
@@ -227,11 +227,11 @@ public final class Polygon {
           double c2 = a2*polyLons[p+1] + b2*polyLats[p+1];
           double s = (1/d)*(b2*c1 - b1*c2);
           // todo TOLERANCE SHOULD MATCH EVERYWHERE this is currently blocked by LUCENE-7165
-          double x00 = Math.min(boxX[b], boxX[b+1]) - ENCODING_TOLERANCE;
+          double x00 = Math.min(boxLons[b], boxLons[b+1]) - ENCODING_TOLERANCE;
           if (x00 > s) {
             continue; // out of range
           }
-          double x01 = Math.max(boxX[b], boxX[b+1]) + ENCODING_TOLERANCE;
+          double x01 = Math.max(boxLons[b], boxLons[b+1]) + ENCODING_TOLERANCE;
           if (x01 < s) {
             continue; // out of range
           }
@@ -245,11 +245,11 @@ public final class Polygon {
           }
 
           double t = (1/d)*(a1*c2 - a2*c1);
-          double y00 = Math.min(boxY[b], boxY[b+1]) - ENCODING_TOLERANCE;
+          double y00 = Math.min(boxLats[b], boxLats[b+1]) - ENCODING_TOLERANCE;
           if (y00 > t || (x00 == s && y00 == t)) {
             continue; // out of range or touching
           }
-          double y01 = Math.max(boxY[b], boxY[b+1]) + ENCODING_TOLERANCE;
+          double y01 = Math.max(boxLats[b], boxLats[b+1]) + ENCODING_TOLERANCE;
           if (y01 < t || (x01 == s && y01 == t)) {
             continue; // out of range or touching
           }
