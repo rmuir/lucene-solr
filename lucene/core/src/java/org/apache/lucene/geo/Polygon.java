@@ -162,19 +162,47 @@ public final class Polygon {
         return Relation.CELL_OUTSIDE_QUERY;
       }
     }
-    // we cross
-    if (crossesInternal(minLat, maxLat, minLon, maxLon)) {
+    
+    int numCorners = numberOfCorners(minLat, maxLat, minLon, maxLon);
+    if (numCorners == 4) {
+      if (crossesInternal(minLat, maxLat, minLon, maxLon)) {
+        return Relation.CELL_CROSSES_QUERY;
+      }
+      return Relation.CELL_INSIDE_QUERY;
+    } else if (numCorners > 0) {
       return Relation.CELL_CROSSES_QUERY;
     }
     
-    // we don't cross, and its not outside our bounding box, check corners
-    if (minLat >= this.minLat && maxLat <= this.maxLat && minLon >= this.minLon && maxLon <= this.maxLon) {
-      if (contains(minLat, minLon) && contains(minLat, maxLon) && contains(maxLat, maxLon) && contains(maxLat, minLon)) {
-        return Relation.CELL_INSIDE_QUERY;
-      }
-    }
+    // we cross
+    //if (crossesInternal(minLat, maxLat, minLon, maxLon)) {
+    //  return Relation.CELL_CROSSES_QUERY;
+    //}
     
     return Relation.CELL_OUTSIDE_QUERY;
+  }
+  
+  // returns 0, 4, or something in between
+  private int numberOfCorners(double minLat, double maxLat, double minLon, double maxLon) {
+    int containsCount = 0;
+    if (contains(minLat, minLon)) {
+      containsCount++;
+    }
+    if (contains(minLat, maxLon)) {
+      containsCount++;
+    }
+    if (containsCount == 1) {
+      return containsCount;
+    }
+    if (contains(maxLat, maxLon)) {
+      containsCount++;
+    }
+    if (containsCount == 2) {
+      return containsCount;
+    }
+    if (contains(maxLat, minLon)) {
+      containsCount++;
+    }
+    return containsCount;
   }
 
   private boolean crossesInternal(double minLat, double maxLat, final double minLon, final double maxLon) {
