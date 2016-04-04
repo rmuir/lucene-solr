@@ -18,6 +18,8 @@ package org.apache.lucene.geo;
 
 import java.util.Arrays;
 
+import org.apache.lucene.index.PointValues.Relation;
+
 /**
  * Represents a closed polygon on the earth's surface.
  * @lucene.experimental
@@ -140,51 +142,42 @@ public final class Polygon {
       return false;
     }
   }
-
-  /**
-   * Computes whether a rectangle is within a polygon (shared boundaries not allowed)
-   */
-  public boolean contains(double minLat, double maxLat, double minLon, double maxLon) {
-    // check if rectangle crosses poly (to handle concave/pacman polys), then check that all 4 corners
-    // are contained
-    boolean contains = crosses(minLat, maxLat, minLon, maxLon) == false &&
-                       contains(minLat, minLon) &&
-                       contains(minLat, maxLon) &&
-                       contains(maxLat, maxLon) &&
-                       contains(maxLat, minLon);
-
-    if (contains) {
-      // if we intersect with any hole, game over
-      for (Polygon hole : holes) {
-        if (hole.crosses(minLat, maxLat, minLon, maxLon) || hole.contains(minLat, maxLat, minLon, maxLon)) {
-          return false;
-        }
-      }
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  /**
-   * Convenience method for accurately computing whether a rectangle crosses a poly.
-   */
-  public boolean crosses(double minLat, double maxLat, final double minLon, final double maxLon) {
+  
+  /** Returns relation to the provided rectangle */
+  public Relation relate(double minLat, double maxLat, double minLon, double maxLon) {
     // if the bounding boxes are disjoint then the shape does not cross
     if (maxLon < this.minLon || minLon > this.maxLon || maxLat < this.minLat || minLat > this.maxLat) {
-      return false;
+      return Relation.CELL_OUTSIDE_QUERY;
     }
     // if the rectangle fully encloses us, we cross.
     if (minLat <= this.minLat && maxLat >= this.maxLat && minLon <= this.minLon && maxLon >= this.maxLon) {
-      return true;
+      return Relation.CELL_CROSSES_QUERY;
     }
-    // if we cross any hole, we cross
+    // check any holes
     for (Polygon hole : holes) {
-      if (hole.crosses(minLat, maxLat, minLon, maxLon)) {
-        return true;
+      Relation holeRelation = hole.relate(minLat, maxLat, minLon, maxLon);
+      if (holeRelation == Relation.CELL_CROSSES_QUERY) {
+        return Relation.CELL_CROSSES_QUERY;
+      } else if (holeRelation == Relation.CELL_INSIDE_QUERY) {
+        return Relation.CELL_OUTSIDE_QUERY;
       }
     }
+    // we cross
+    if (crossesInternal(minLat, maxLat, minLon, maxLon)) {
+      return Relation.CELL_CROSSES_QUERY;
+    }
+    
+    // we don't cross, and its not outside our bounding box, check corners
+    if (minLat >= this.minLat && maxLat <= this.maxLat && minLon >= this.minLon && maxLon <= this.maxLon) {
+      if (contains(minLat, minLon) && contains(minLat, maxLon) && contains(maxLat, maxLon) && contains(maxLat, minLon)) {
+        return Relation.CELL_INSIDE_QUERY;
+      }
+    }
+    
+    return Relation.CELL_OUTSIDE_QUERY;
+  }
 
+  private boolean crossesInternal(double minLat, double maxLat, final double minLon, final double maxLon) {
     /*
      * Accurately compute (within restrictions of cartesian decimal degrees) whether a rectangle crosses a polygon
      */
@@ -255,24 +248,17 @@ public final class Polygon {
     return false;
   }
 
-  /** Helper for multipolygon logic: returns true if any of the supplied polygons contain the rectangle */
-  public static boolean contains(Polygon[] polygons, double minLat, double maxLat, double minLon, double maxLon) {
+  /** Returns the multipolygon relation for the rectangle */
+  public static Relation relate(Polygon[] polygons, double minLat, double maxLat, double minLon, double maxLon) {
     for (Polygon polygon : polygons) {
-      if (polygon.contains(minLat, maxLat, minLon, maxLon)) {
-        return true;
+      Relation relation = polygon.relate(minLat, maxLat, minLon, maxLon);
+      if (relation != Relation.CELL_OUTSIDE_QUERY) {
+        // note: we optimize for non-overlapping multipolygons. so if we cross one,
+        // we won't keep iterating to try to find a contains.
+        return relation;
       }
     }
-    return false;
-  }
-
-  /** Helper for multipolygon logic: returns true if any of the supplied polygons crosses the rectangle */
-  public static boolean crosses(Polygon[] polygons, double minLat, double maxLat, double minLon, double maxLon) {
-    for (Polygon polygon : polygons) {
-      if (polygon.crosses(minLat, maxLat, minLon, maxLon)) {
-        return true;
-      }
-    }
-    return false;
+    return Relation.CELL_OUTSIDE_QUERY;
   }
 
   @Override
