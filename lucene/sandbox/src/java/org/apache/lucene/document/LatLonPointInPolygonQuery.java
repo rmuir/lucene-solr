@@ -101,6 +101,11 @@ final class LatLonPointInPolygonQuery extends Query {
     }
     final float matchCost = cumulativeCost;
 
+    final LatLonGrid grid = new LatLonGrid(LatLonPoint.encodeLatitude(box.minLat), 
+                                           LatLonPoint.encodeLatitude(box.maxLat),
+                                           LatLonPoint.encodeLongitude(box.minLon),
+                                           LatLonPoint.encodeLongitude(box.maxLon), polygons);
+
     return new ConstantScoreWeight(this) {
 
       @Override
@@ -128,7 +133,7 @@ final class LatLonPointInPolygonQuery extends Query {
         } else {
           preApproved = new FixedBitSet(reader.maxDoc());
         }
-        values.intersect(field,
+        values.intersect(field, 
                          new IntersectVisitor() {
                            @Override
                            public void visit(int docID) {
@@ -165,13 +170,7 @@ final class LatLonPointInPolygonQuery extends Query {
                              double cellMaxLat = LatLonPoint.decodeLatitude(maxPackedValue, 0);
                              double cellMaxLon = LatLonPoint.decodeLongitude(maxPackedValue, Integer.BYTES);
 
-                             if (Polygon.contains(polygons, cellMinLat, cellMaxLat, cellMinLon, cellMaxLon)) {
-                               return Relation.CELL_INSIDE_QUERY;
-                             } else if (Polygon.crosses(polygons, cellMinLat, cellMaxLat, cellMinLon, cellMaxLon)) {
-                               return Relation.CELL_CROSSES_QUERY;
-                             } else {
-                               return Relation.CELL_OUTSIDE_QUERY;
-                             }
+                             return Polygon.relate(polygons, cellMinLat, cellMaxLat, cellMinLon, cellMaxLon);
                            }
                          });
 
@@ -195,8 +194,24 @@ final class LatLonPointInPolygonQuery extends Query {
               int count = docValues.count();
               for (int i = 0; i < count; i++) {
                 long encoded = docValues.valueAt(i);
-                double docLatitude = LatLonPoint.decodeLatitude((int)(encoded >> 32));
-                double docLongitude = LatLonPoint.decodeLongitude((int)(encoded & 0xFFFFFFFF));
+                // first try our grid
+                int latitudeBits = (int)(encoded >> 32);
+                int longitudeBits = (int)(encoded & 0xFFFFFFFF);
+                
+                int gridIndex = grid.index(latitudeBits, longitudeBits);
+                if (gridIndex == -1) {
+                  continue; // outside of bounding box range
+                } else if (grid.haveAnswer.get(gridIndex)) {
+                  if (grid.answer.get(gridIndex)) {
+                    return true;
+                  } else {
+                    continue;
+                  }
+                }
+
+                // otherwise do the real test
+                double docLatitude = LatLonPoint.decodeLatitude(latitudeBits);
+                double docLongitude = LatLonPoint.decodeLongitude(longitudeBits);
                 if (Polygon.contains(polygons, docLatitude, docLongitude)) {
                   return true;
                 }
