@@ -20,6 +20,7 @@ package org.apache.lucene.spatial.geopoint.search;
 import java.io.IOException;
 
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.PointValues.Relation;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.MultiTermQuery;
@@ -127,30 +128,16 @@ abstract class GeoPointMultiTermQuery extends MultiTermQuery {
       return GeoRelationUtils.rectIntersects(minLat, maxLat, minLon, maxLon, geoPointQuery.minLat, geoPointQuery.maxLat,
                                              geoPointQuery.minLon, geoPointQuery.maxLon);
     }
+    
+    /** 
+     * Called for non-leaf cells to test how the cell relates to the query, to
+     * determine how to further recurse down the tree. 
+     */
+    protected abstract Relation compare(double minLat, double maxLat, double minLon, double maxLon);
 
     /**
-     * Return whether quad-cell contains the bounding box of this shape
+     * Called for leaf cells to test if the point is in the query
      */
-    protected boolean cellContains(final double minLat, final double maxLat, final double minLon, final double maxLon) {
-      return GeoRelationUtils.rectWithin(geoPointQuery.minLat, geoPointQuery.maxLat, geoPointQuery.minLon,
-                                         geoPointQuery.maxLon, minLat, maxLat, minLon, maxLon);
-    }
-
-    /**
-     * Determine whether the quad-cell crosses the shape
-     */
-    abstract protected boolean cellCrosses(final double minLat, final double maxLat, final double minLon, final double maxLon);
-
-    /**
-     * Determine whether quad-cell is within the shape
-     */
-    abstract protected boolean cellWithin(final double minLat, final double maxLat, final double minLon, final double maxLon);
-
-    /**
-     * Default shape is a rectangle, so this returns the same as {@code cellIntersectsMBR}
-     */
-    abstract protected boolean cellIntersectsShape(final double minLat, final double maxLat, final double minLon, final double maxLon);
-
-    abstract protected boolean postFilter(final double lat, final double lon);
+    protected abstract boolean postFilter(final double lat, final double lon);
   }
 }

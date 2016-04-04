@@ -17,6 +17,7 @@
 package org.apache.lucene.spatial.geopoint.search;
 
 import org.apache.lucene.geo.Rectangle;
+import org.apache.lucene.index.PointValues.Relation;
 import org.apache.lucene.search.MultiTermQuery;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField.TermEncoding;
 import org.apache.lucene.util.SloppyMath;
@@ -68,40 +69,30 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
     }
 
     @Override
-    protected boolean cellCrosses(final double minLat, final double maxLat, final double minLon, final double maxLon) {
-      // bounding box check
+    protected Relation compare(double minLat, double maxLat, double minLon, double maxLon) {
+      // check bounding box
       if (maxLat < GeoPointDistanceQueryImpl.this.minLat ||
           maxLon < GeoPointDistanceQueryImpl.this.minLon ||
           minLat > GeoPointDistanceQueryImpl.this.maxLat ||
           minLon > GeoPointDistanceQueryImpl.this.maxLon) {
-        return false;
-      } else if ((centerLon < minLon || centerLon > maxLon) && (axisLat+ Rectangle.AXISLAT_ERROR < minLat || axisLat- Rectangle.AXISLAT_ERROR > maxLat)) {
-        if (SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, minLat, minLon) > distanceQuery.radiusMeters &&
-            SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, minLat, maxLon) > distanceQuery.radiusMeters &&
-            SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, maxLat, minLon) > distanceQuery.radiusMeters &&
-            SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, maxLat, maxLon) > distanceQuery.radiusMeters) {
-          return false;
-        }
-      }
-      return true;
-    }
-
-    @Override
-    protected boolean cellWithin(final double minLat, final double maxLat, final double minLon, final double maxLon) {
-      if (maxLon - centerLon < 90 && centerLon - minLon < 90 &&
+        return Relation.CELL_OUTSIDE_QUERY;
+      } else if (maxLon - centerLon < 90 && centerLon - minLon < 90 &&
           SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, minLat, minLon) <= distanceQuery.radiusMeters &&
           SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, minLat, maxLon) <= distanceQuery.radiusMeters &&
           SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, maxLat, minLon) <= distanceQuery.radiusMeters &&
           SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, maxLat, maxLon) <= distanceQuery.radiusMeters) {
         // we are fully enclosed, collect everything within this subtree
-        return true;
+        return Relation.CELL_INSIDE_QUERY;
+      } else if ((centerLon < minLon || centerLon > maxLon) && (axisLat+ Rectangle.AXISLAT_ERROR < minLat || axisLat- Rectangle.AXISLAT_ERROR > maxLat)) {
+        if (SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, minLat, minLon) > distanceQuery.radiusMeters &&
+            SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, minLat, maxLon) > distanceQuery.radiusMeters &&
+            SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, maxLat, minLon) > distanceQuery.radiusMeters &&
+            SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, maxLat, maxLon) > distanceQuery.radiusMeters) {
+          return Relation.CELL_OUTSIDE_QUERY;
+        }
       }
-      return false;
-    }
-
-    @Override
-    protected boolean cellIntersectsShape(final double minLat, final double maxLat, final double minLon, final double maxLon) {
-      return cellCrosses(minLat, maxLat, minLon, maxLon);
+      
+      return Relation.CELL_CROSSES_QUERY;
     }
 
     /**

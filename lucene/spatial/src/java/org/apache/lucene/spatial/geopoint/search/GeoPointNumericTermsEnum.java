@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.lucene.index.PointValues.Relation;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField;
 import org.apache.lucene.spatial.util.GeoEncodingUtils;
@@ -87,14 +88,19 @@ final class GeoPointNumericTermsEnum extends GeoPointTermsEnum {
     final short level = (short)((GeoEncodingUtils.BITS<<1)-res>>>1);
 
     // if cell is within and a factor of the precision step, or it crosses the edge of the shape add the range
-    final boolean within = res % GeoPointField.PRECISION_STEP == 0 && relationImpl.cellWithin(minLat, maxLat, minLon, maxLon);
-    if (within || (level == DETAIL_LEVEL && relationImpl.cellIntersectsShape(minLat, maxLat, minLon, maxLon))) {
+    // otherwise, we only need the MBR check
+    Relation relation = Relation.CELL_OUTSIDE_QUERY;
+    if (res % GeoPointField.PRECISION_STEP == 0 || level == DETAIL_LEVEL) {
+      relation = relationImpl.compare(minLat, maxLat, minLon, maxLon);
+    }
+    if (relation != Relation.CELL_OUTSIDE_QUERY) {
       final short nextRes = (short)(res-1);
+      final boolean boundary = relation == Relation.CELL_CROSSES_QUERY;
       if (nextRes % GeoPointField.PRECISION_STEP == 0) {
-        rangeBounds.add(new Range(start, nextRes, !within));
-        rangeBounds.add(new Range(start|(1L<<nextRes), nextRes, !within));
+        rangeBounds.add(new Range(start, nextRes, boundary));
+        rangeBounds.add(new Range(start|(1L<<nextRes), nextRes, boundary));
       } else {
-        rangeBounds.add(new Range(start, res, !within));
+        rangeBounds.add(new Range(start, res, boundary));
       }
     } else if (level < DETAIL_LEVEL && relationImpl.cellIntersectsMBR(minLat, maxLat, minLon, maxLon)) {
       computeRange(start, (short) (res - 1));

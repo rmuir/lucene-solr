@@ -16,6 +16,7 @@
  */
 package org.apache.lucene.spatial.geopoint.search;
 
+import org.apache.lucene.index.PointValues.Relation;
 import org.apache.lucene.search.MultiTermQuery;
 import org.apache.lucene.util.SloppyMath;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField;
@@ -72,28 +73,23 @@ class GeoPointInBBoxQueryImpl extends GeoPointMultiTermQuery {
       super(query);
     }
 
-    /**
-     * Determine whether the quad-cell crosses the shape
-     */
     @Override
-    protected boolean cellCrosses(final double minLat, final double maxLat, final double minLon, final double maxLon) {
-      return GeoRelationUtils.rectCrosses(minLat, maxLat, minLon, maxLon, GeoPointInBBoxQueryImpl.this.minLat,
-                                          GeoPointInBBoxQueryImpl.this.maxLat, GeoPointInBBoxQueryImpl.this.minLon, GeoPointInBBoxQueryImpl.this.maxLon);
-    }
-
-    /**
-     * Determine whether quad-cell is within the shape
-     */
-    @Override
-    protected boolean cellWithin(final double minLat, final double maxLat, final double minLon, final double maxLon) {
-      return GeoRelationUtils.rectWithin(minLat, maxLat, minLon, maxLon, GeoPointInBBoxQueryImpl.this.minLat,
-                                         GeoPointInBBoxQueryImpl.this.maxLat,
-                                         GeoPointInBBoxQueryImpl.this.minLon, GeoPointInBBoxQueryImpl.this.maxLon);
-    }
-
-    @Override
-    protected boolean cellIntersectsShape(final double minLat, final double maxLat, final double minLon, final double maxLon) {
-      return cellIntersectsMBR(minLat, maxLat, minLon, maxLon);
+    protected Relation compare(double minLat, double maxLat, double minLon, double maxLon) {
+      if (GeoRelationUtils.rectWithin(minLat, maxLat, minLon, maxLon, 
+                                      GeoPointInBBoxQueryImpl.this.minLat,
+                                      GeoPointInBBoxQueryImpl.this.maxLat,
+                                      GeoPointInBBoxQueryImpl.this.minLon, 
+                                      GeoPointInBBoxQueryImpl.this.maxLon)) {
+        return Relation.CELL_INSIDE_QUERY;
+      } else if (GeoRelationUtils.rectCrosses(minLat, maxLat, minLon, maxLon, 
+                                              GeoPointInBBoxQueryImpl.this.minLat,
+                                              GeoPointInBBoxQueryImpl.this.maxLat, 
+                                              GeoPointInBBoxQueryImpl.this.minLon, 
+                                              GeoPointInBBoxQueryImpl.this.maxLon)) {
+        return Relation.CELL_CROSSES_QUERY;
+      } else {
+        return Relation.CELL_OUTSIDE_QUERY;
+      }
     }
 
     @Override

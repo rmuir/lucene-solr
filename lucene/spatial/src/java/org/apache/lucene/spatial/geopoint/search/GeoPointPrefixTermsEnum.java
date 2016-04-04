@@ -1,5 +1,7 @@
 package org.apache.lucene.spatial.geopoint.search;
 
+import org.apache.lucene.index.PointValues.Relation;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -67,14 +69,6 @@ final class GeoPointPrefixTermsEnum extends GeoPointTermsEnum {
     this.currEnd = currStart | mask;
   }
 
-  private boolean within(final double minLat, final double maxLat, final double minLon, final double maxLon) {
-    return relationImpl.cellWithin(minLat, maxLat, minLon, maxLon);
-  }
-
-  private boolean boundary(final double minLat, final double maxLat, final double minLon, final double maxLon) {
-    return shift == maxShift && relationImpl.cellIntersectsShape(minLat, maxLat, minLon, maxLon);
-  }
-
   private boolean nextWithin() {
     if (withinOnly == false) {
       return false;
@@ -100,9 +94,13 @@ final class GeoPointPrefixTermsEnum extends GeoPointTermsEnum {
       maxLat = mortonUnhashLat(currEnd);
 
       isWithin = false;
+      Relation relation = Relation.CELL_OUTSIDE_QUERY;
+      if (shift == maxShift) {
+        relation = relationImpl.compare(minLat, maxLat, minLon, maxLon);
+      }
       // within or a boundary
-      if (boundary(minLat, maxLat, minLon, maxLon) == true) {
-        isWithin = within(minLat, maxLat, minLon, maxLon);
+      if (relation != Relation.CELL_OUTSIDE_QUERY) {
+        isWithin = relation == Relation.CELL_INSIDE_QUERY;
         final int m;
         if (isWithin == false || (m = shift % GeoPointField.PRECISION_STEP) == 0) {
           setNextRange(isWithin == false);
