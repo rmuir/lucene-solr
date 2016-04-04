@@ -141,13 +141,19 @@ final class LatLonGrid {
     return Polygon.contains(polygons, docLatitude, docLongitude);
   }
   
+  /** Returns 1 if we contain the point, -1 if we don't, 0 if we are not sure */
+  int containsQuickly(int latitude, int longitude) {
+    int index = index(latitude, longitude);
+    if (index == -1) {
+      return -1; // outside of bounding box range
+    } else if (haveAnswer.get(index)) {
+      return answer.get(index) ? 1 : -1;
+    }
+    return 0; // indeterminate
+  }
+  
   /** Returns relation to the provided rectangle */
   Relation relate(int minLat, int maxLat, int minLon, int maxLon) {
-    return Polygon.relate(polygons, LatLonPoint.decodeLatitude(minLat), 
-                                    LatLonPoint.decodeLatitude(maxLat), 
-                                    LatLonPoint.decodeLongitude(minLon), 
-                                    LatLonPoint.decodeLongitude(maxLon));
-    /*
     // if the bounding boxes are disjoint then the shape does not cross
     if (maxLon < this.minLon || minLon > this.maxLon || maxLat < this.minLat || minLat > this.maxLat) {
       return Relation.CELL_OUTSIDE_QUERY;
@@ -156,33 +162,43 @@ final class LatLonGrid {
     if (minLat <= this.minLat && maxLat >= this.maxLat && minLon <= this.minLon && maxLon >= this.maxLon) {
       return Relation.CELL_CROSSES_QUERY;
     }
-    // check any holes
-    for (Polygon hole : holes) {
-      Relation holeRelation = hole.relate(minLat, maxLat, minLon, maxLon);
-      if (holeRelation == Relation.CELL_CROSSES_QUERY) {
-        return Relation.CELL_CROSSES_QUERY;
-      } else if (holeRelation == Relation.CELL_INSIDE_QUERY) {
-        return Relation.CELL_OUTSIDE_QUERY;
-      }
+    
+    int on = 0;
+    int off = 0;
+    int p1 = containsQuickly(minLat, minLon);
+    if (p1 > 0) {
+      on++;
+    } else if (p1 < 0) {
+      off++;
     }
-    // check each corner: if < 4 are present, its cheaper than crossesSlowly
-    int numCorners = numberOfCorners(minLat, maxLat, minLon, maxLon);
-    if (numCorners == 4) {
-      if (crossesSlowly(minLat, maxLat, minLon, maxLon)) {
-        return Relation.CELL_CROSSES_QUERY;
-      }
-      return Relation.CELL_INSIDE_QUERY;
-    } else if (numCorners > 0) {
+    int p2 = containsQuickly(minLat, maxLon);
+    if (p2 > 0) {
+      on++;
+    } else if (p2 < 0) {
+      off++;
+    }
+    int p3 = containsQuickly(maxLat, minLon);
+    if (p3 > 0) {
+      on++;
+    } else if (p3 < 0) {
+      off++;
+    }
+    int p4 = containsQuickly(maxLat, maxLon);
+    if (p4 > 0) {
+      on++;
+    } else if (p4 < 0) {
+      off++;
+    }
+    
+    if (on > 0 && off > 0) {
       return Relation.CELL_CROSSES_QUERY;
     }
     
-    // we cross
-    if (crossesSlowly(minLat, maxLat, minLon, maxLon)) {
-      return Relation.CELL_CROSSES_QUERY;
-    }
-    
-    return Relation.CELL_OUTSIDE_QUERY;
-    */
+    // do it the hard way!
+    return Polygon.relate(polygons, LatLonPoint.decodeLatitude(minLat), 
+                                    LatLonPoint.decodeLatitude(maxLat), 
+                                    LatLonPoint.decodeLongitude(minLon), 
+                                    LatLonPoint.decodeLongitude(maxLon));
   }
   
   /** Returns grid index of lat/lon, or -1 if the value is outside of the bounding box. */
