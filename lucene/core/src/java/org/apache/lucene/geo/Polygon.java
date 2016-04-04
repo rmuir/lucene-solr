@@ -226,27 +226,40 @@ public final class Polygon {
           // lines are not parallel, check intersecting points
           double c2 = a2*polyLons[p+1] + b2*polyLats[p+1];
           double s = (1/d)*(b2*c1 - b1*c2);
-          double t = (1/d)*(a1*c2 - a2*c1);
           // todo TOLERANCE SHOULD MATCH EVERYWHERE this is currently blocked by LUCENE-7165
           double x00 = Math.min(boxX[b], boxX[b+1]) - ENCODING_TOLERANCE;
-          double y00 = Math.min(boxY[b], boxY[b+1]) - ENCODING_TOLERANCE;
-          if ((x00 == s && y00 == t) || x00 > s || y00 > t) {
-            continue; // touching or out of range
+          if (x00 > s) {
+            continue; // out of range
           }
           double x01 = Math.max(boxX[b], boxX[b+1]) + ENCODING_TOLERANCE;
-          double y01 = Math.max(boxY[b], boxY[b+1]) + ENCODING_TOLERANCE;
-          if ((x01 == s && y01 == t) || x01 < s || y01 < t) {
-            continue; // touching or out of range
+          if (x01 < s) {
+            continue; // out of range
           }
           double x10 = Math.min(polyLons[p], polyLons[p+1]) - ENCODING_TOLERANCE;
-          double y10 = Math.min(polyLats[p], polyLats[p+1]) - ENCODING_TOLERANCE;
-          if ((x10 == s && y10 == t) || x10 > s || y10 > t) {
-            continue; // touching or out of range
+          if (x10 > s) {
+            continue; // out of range
           }
           double x11 = Math.max(polyLons[p], polyLons[p+1]) + ENCODING_TOLERANCE;
+          if (x11 < s) {
+            continue; // out of range
+          }
+
+          double t = (1/d)*(a1*c2 - a2*c1);
+          double y00 = Math.min(boxY[b], boxY[b+1]) - ENCODING_TOLERANCE;
+          if (y00 > t || (x00 == s && y00 == t)) {
+            continue; // out of range or touching
+          }
+          double y01 = Math.max(boxY[b], boxY[b+1]) + ENCODING_TOLERANCE;
+          if (y01 < t || (x01 == s && y01 == t)) {
+            continue; // out of range or touching
+          }
+          double y10 = Math.min(polyLats[p], polyLats[p+1]) - ENCODING_TOLERANCE;
+          if (y10 > t || (x10 == s && y10 == t)) {
+            continue; // out of range or touching
+          }
           double y11 = Math.max(polyLats[p], polyLats[p+1]) + ENCODING_TOLERANCE;
-          if ((x11 == s && y11 == t) || x11 < s || y11 < t) {
-            continue; // touching or out of range
+          if (y11 < t || (x11 == s && y11 == t)) {
+            continue; // out of range or touching
           }
           // if line segments are not touching and the intersection point is within the range of either segment
           return true;
