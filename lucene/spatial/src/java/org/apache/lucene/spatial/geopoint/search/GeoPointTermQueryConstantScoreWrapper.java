@@ -32,6 +32,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.TwoPhaseIterator;
 import org.apache.lucene.search.Weight;
+import org.apache.lucene.spatial.geopoint.search.GeoPointMultiTermQuery.CellComparator;
 import org.apache.lucene.util.BitSet;
 import org.apache.lucene.util.DocIdSetBuilder;
 import org.apache.lucene.util.FixedBitSet;
@@ -93,6 +94,7 @@ final class GeoPointTermQueryConstantScoreWrapper <Q extends GeoPointMultiTermQu
 
         final GeoPointTermsEnum termsEnum = (GeoPointTermsEnum)(query.getTermsEnum(terms, null));
         assert termsEnum != null;
+        final CellComparator comparator = termsEnum.relationImpl;
 
         LeafReader reader = context.reader();
         // approximation (postfiltering has not yet been applied)
@@ -140,7 +142,7 @@ final class GeoPointTermQueryConstantScoreWrapper <Q extends GeoPointMultiTermQu
               int count = sdv.count();
               for (int i = 0; i < count; i++) {
                 long hash = sdv.valueAt(i);
-                if (termsEnum.postFilter(hash)) {
+                if (comparator.postFilter(hash)) {
                   return true;
                 }
               }

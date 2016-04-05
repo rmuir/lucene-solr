@@ -56,7 +56,7 @@ final class GeoPointNumericTermsEnum extends GeoPointTermsEnum {
   /**
    * entry point for recursively computing ranges
    */
-  private final void computeRange(long term, final short shift) {
+  private void computeRange(long term, final short shift) {
     final long split = term | (0x1L<<shift);
     assert shift < 64;
     final long upperMax;
@@ -108,19 +108,19 @@ final class GeoPointNumericTermsEnum extends GeoPointTermsEnum {
   }
 
   @Override
-  protected final BytesRef peek() {
+  BytesRef peek() {
     rangeBounds.get(0).fillBytesRef(this.nextSubRangeBRB);
     return nextSubRangeBRB.get();
   }
 
   @Override
-  protected void nextRange() {
+  void nextRange() {
     currentRange = rangeBounds.remove(0);
     super.nextRange();
   }
 
   @Override
-  protected final BytesRef nextSeekTerm(BytesRef term) {
+  protected BytesRef nextSeekTerm(BytesRef term) {
     while (hasNext()) {
       if (currentRange == null) {
         nextRange();
@@ -142,14 +142,14 @@ final class GeoPointNumericTermsEnum extends GeoPointTermsEnum {
   }
 
   @Override
-  protected final boolean hasNext() {
+  boolean hasNext() {
     return rangeBounds.isEmpty() == false;
   }
 
   /**
    * Internal class to represent a range along the space filling curve
    */
-  protected final class Range extends BaseRange {
+  static final class Range extends BaseRange {
     Range(final long lower, final short shift, boolean boundary) {
       super(lower, shift, boundary);
     }
@@ -159,7 +159,7 @@ final class GeoPointNumericTermsEnum extends GeoPointTermsEnum {
      * quite expensive), only when we need it.
      */
     @Override
-    protected void fillBytesRef(BytesRefBuilder result) {
+    void fillBytesRef(BytesRefBuilder result) {
       assert result != null;
       LegacyNumericUtils.longToPrefixCoded(start, shift, result);
     }

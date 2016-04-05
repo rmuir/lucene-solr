@@ -58,7 +58,7 @@ final class GeoPointPrefixTermsEnum extends GeoPointTermsEnum {
   private boolean withinOnly = false;
   private long lastWithin;
 
-  public GeoPointPrefixTermsEnum(final TermsEnum tenum, final GeoPointMultiTermQuery query) {
+  GeoPointPrefixTermsEnum(final TermsEnum tenum, final GeoPointMultiTermQuery query) {
     super(tenum, query);
     this.start = mortonHash(query.minLat, query.minLon);
     this.currentRange = new Range(0, shift, true);
@@ -146,12 +146,12 @@ final class GeoPointPrefixTermsEnum extends GeoPointTermsEnum {
   }
 
   @Override
-  protected final BytesRef peek() {
+  final BytesRef peek() {
     nextRange.fillBytesRef(nextSubRangeBRB);
     return super.peek();
   }
 
-  protected void seek(long term, short res) {
+  void seek(long term, short res) {
     if (term < currStart && res < maxShift) {
       throw new IllegalArgumentException("trying to seek backwards");
     } else if (term == currStart) {
@@ -164,13 +164,13 @@ final class GeoPointPrefixTermsEnum extends GeoPointTermsEnum {
   }
 
   @Override
-  protected void nextRange() {
+  void nextRange() {
     hasNext = false;
     super.nextRange();
   }
 
   @Override
-  protected final boolean hasNext() {
+  boolean hasNext() {
     if (hasNext == true || nextWithin()) {
       return true;
     }
@@ -183,7 +183,7 @@ final class GeoPointPrefixTermsEnum extends GeoPointTermsEnum {
   }
 
   @Override
-  protected final BytesRef nextSeekTerm(BytesRef term) {
+  protected BytesRef nextSeekTerm(BytesRef term) {
     while (hasNext()) {
       nextRange();
       if (term == null) {
@@ -223,8 +223,8 @@ final class GeoPointPrefixTermsEnum extends GeoPointTermsEnum {
     return AcceptStatus.YES;
   }
 
-  protected final class Range extends BaseRange {
-    public Range(final long start, final short res, final boolean boundary) {
+  static final class Range extends BaseRange {
+    Range(final long start, final short res, final boolean boundary) {
       super(start, res, boundary);
     }
 
