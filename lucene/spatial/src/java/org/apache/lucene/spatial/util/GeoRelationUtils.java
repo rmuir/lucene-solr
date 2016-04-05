@@ -64,12 +64,4 @@ public class GeoRelationUtils {
     return !(rectDisjoint(aMinLat, aMaxLat, aMinLon, aMaxLon, bMinLat, bMaxLat, bMinLon, bMaxLon) ||
              rectWithin(aMinLat, aMaxLat, aMinLon, aMaxLon, bMinLat, bMaxLat, bMinLon, bMaxLon));
   }
-
-  /**
-   * Computes whether a rectangle intersects another rectangle (crosses, within, touching, etc)
-   */
-  public static boolean rectIntersects(final double aMinLat, final double aMaxLat, final double aMinLon, final double aMaxLon,
-                                       final double bMinLat, final double bMaxLat, final double bMinLon, final double bMaxLon) {
-    return !((aMaxLon < bMinLon || aMinLon > bMaxLon || aMaxLat < bMinLat || aMinLat > bMaxLat));
-  }
 }

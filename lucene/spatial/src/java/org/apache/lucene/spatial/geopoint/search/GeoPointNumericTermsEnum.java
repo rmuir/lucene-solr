@@ -80,11 +80,6 @@ final class GeoPointNumericTermsEnum extends GeoPointTermsEnum {
    * @param res spatial res represented as a bit shift (MSB is lower res)
    */
   private void relateAndRecurse(final long start, final long end, final short res) {
-    final double minLon = GeoEncodingUtils.mortonUnhashLon(start);
-    final double minLat = GeoEncodingUtils.mortonUnhashLat(start);
-    final double maxLon = GeoEncodingUtils.mortonUnhashLon(end);
-    final double maxLat = GeoEncodingUtils.mortonUnhashLat(end);
-
     final short level = (short)((GeoEncodingUtils.BITS<<1)-res>>>1);
 
     // if cell is within and a factor of the precision step, or it crosses the edge of the shape add the range
@@ -102,7 +97,7 @@ final class GeoPointNumericTermsEnum extends GeoPointTermsEnum {
       } else {
         rangeBounds.add(new Range(start, res, boundary));
       }
-    } else if (level < DETAIL_LEVEL && relationImpl.cellIntersectsMBR(minLat, maxLat, minLon, maxLon)) {
+    } else if (level < DETAIL_LEVEL && relationImpl.cellIntersectsMBR(start, end)) {
       computeRange(start, (short) (res - 1));
     }
   }

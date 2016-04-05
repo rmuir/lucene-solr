@@ -26,8 +26,6 @@ import org.apache.lucene.spatial.geopoint.document.GeoPointField;
 import org.apache.lucene.spatial.util.GeoEncodingUtils;
 
 import static org.apache.lucene.spatial.util.GeoEncodingUtils.mortonHash;
-import static org.apache.lucene.spatial.util.GeoEncodingUtils.mortonUnhashLat;
-import static org.apache.lucene.spatial.util.GeoEncodingUtils.mortonUnhashLon;
 import static org.apache.lucene.spatial.util.GeoEncodingUtils.geoCodedToPrefixCoded;
 import static org.apache.lucene.spatial.util.GeoEncodingUtils.prefixCodedToGeoCoded;
 import static org.apache.lucene.spatial.util.GeoEncodingUtils.getPrefixCodedShift;
@@ -84,15 +82,8 @@ final class GeoPointPrefixTermsEnum extends GeoPointTermsEnum {
   }
 
   private void nextRelation() {
-    double minLon = mortonUnhashLon(currStart);
-    double minLat = mortonUnhashLat(currStart);
-    double maxLon;
-    double maxLat;
     boolean isWithin;
     do {
-      maxLon = mortonUnhashLon(currEnd);
-      maxLat = mortonUnhashLat(currEnd);
-
       isWithin = false;
       Relation relation = Relation.CELL_OUTSIDE_QUERY;
       if (shift == maxShift) {
@@ -116,13 +107,11 @@ final class GeoPointPrefixTermsEnum extends GeoPointTermsEnum {
       }
 
       // within cell but not at a depth factor of PRECISION_STEP
-      if (isWithin == true || (relationImpl.cellIntersectsMBR(minLat, maxLat, minLon, maxLon) == true && shift != maxShift)) {
+      if (isWithin == true || (shift != maxShift && relationImpl.cellIntersectsMBR(currStart, currEnd))) {
         // descend: currStart need not change since shift handles end of range
         currEnd = currStart | (1L<<--shift) - 1;
       } else {
         advanceVariables();
-        minLon = mortonUnhashLon(currStart);
-        minLat = mortonUnhashLat(currStart);
       }
     } while(shift < 63);
   }

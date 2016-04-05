@@ -26,6 +26,7 @@ import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.MultiTermQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.util.AttributeSource;
+import org.apache.lucene.util.BitUtil;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField.TermEncoding;
 import org.apache.lucene.spatial.util.GeoEncodingUtils;
@@ -40,7 +41,11 @@ import org.apache.lucene.util.SloppyMath;
  * @lucene.experimental
  */
 abstract class GeoPointMultiTermQuery extends MultiTermQuery {
-  // simple bounding box optimization - no objects used to avoid dependencies
+  // exposed for subclasses - no objects used to avoid dependencies
+  // these are not quantized and are the original user-provided values
+  // TODO: these really belong in the bbox impl only (for two-phase checks).
+  // but everything currently subclasses that? If we fix rounding, they can get removed
+  // that way too (bbox won't ever need two-phases).
   protected final double minLon;
   protected final double minLat;
   protected final double maxLon;
@@ -49,12 +54,22 @@ abstract class GeoPointMultiTermQuery extends MultiTermQuery {
   protected final short maxShift;
   protected final TermEncoding termEncoding;
   protected final CellComparator cellComparator;
+  
+  // these are used for low level MBR intersection tests
+  // they are currently "expanded" 1 geopoint "ulp" in each direction to compensate for rounding/overflow issues.
+  final long minLatMBR;
+  final long maxLatMBR;
+  final long minLonMBR;
+  final long maxLonMBR;
+  
+  // TODO: maybe some two-phase checks could benefit from minHashMBR/maxHashMBR? if documents have multiple values
+  // especially this can avoid deinterleave cost.
 
   /**
    * Constructs a query matching terms that cannot be represented with a single
    * Term.
    */
-  public GeoPointMultiTermQuery(String field, final TermEncoding termEncoding, final double minLat, final double maxLat, final double minLon, final double maxLon) {
+  GeoPointMultiTermQuery(String field, final TermEncoding termEncoding, final double minLat, final double maxLat, final double minLon, final double maxLon) {
     super(field);
 
     GeoUtils.checkLatitude(minLat);
@@ -66,6 +81,21 @@ abstract class GeoPointMultiTermQuery extends MultiTermQuery {
     this.maxLat = maxLat;
     this.minLon = minLon;
     this.maxLon = maxLon;
+    
+    // TODO: add scaleLatFloor/scaleLatCeil instead of increasing one ulp ?
+    // TODO: if we improve the encoding, factor this out
+    long minLatBits = GeoEncodingUtils.scaleLat(minLat);
+    long maxLatBits = GeoEncodingUtils.scaleLat(maxLat);
+    long minLonBits = GeoEncodingUtils.scaleLon(minLon);
+    long maxLonBits = GeoEncodingUtils.scaleLon(maxLon);
+    assert minLatBits >= 0 && minLatBits <= 1L + Integer.MAX_VALUE;
+    assert maxLatBits >= 0 && maxLatBits <= 1L + Integer.MAX_VALUE;
+    assert minLonBits >= 0 && minLonBits <= 1L + Integer.MAX_VALUE;
+    assert maxLonBits >= 0 && maxLonBits <= 1L + Integer.MAX_VALUE;
+    minLatMBR = Math.max(0, minLatBits-1);
+    maxLatMBR = Math.min(1L + Integer.MAX_VALUE, maxLatBits+1);
+    minLonMBR = Math.max(0, minLonBits-1);
+    maxLonMBR = Math.min(1L + Integer.MAX_VALUE, maxLonBits+1);
 
     this.maxShift = computeMaxShift();
     this.termEncoding = termEncoding;
@@ -74,7 +104,7 @@ abstract class GeoPointMultiTermQuery extends MultiTermQuery {
     this.rewriteMethod = GEO_CONSTANT_SCORE_REWRITE;
   }
 
-  public static final RewriteMethod GEO_CONSTANT_SCORE_REWRITE = new RewriteMethod() {
+  static final RewriteMethod GEO_CONSTANT_SCORE_REWRITE = new RewriteMethod() {
     @Override
     public Query rewrite(IndexReader reader, MultiTermQuery query) {
       return new GeoPointTermQueryConstantScoreWrapper<>((GeoPointMultiTermQuery)query);
@@ -122,12 +152,21 @@ abstract class GeoPointMultiTermQuery extends MultiTermQuery {
       this.geoPointQuery = query;
     }
 
-    /**
-     * Primary driver for cells intersecting shape boundaries
-     */
-    protected boolean cellIntersectsMBR(final double minLat, final double maxLat, final double minLon, final double maxLon) {
-      return GeoRelationUtils.rectIntersects(minLat, maxLat, minLon, maxLon, geoPointQuery.minLat, geoPointQuery.maxLat,
-                                             geoPointQuery.minLon, geoPointQuery.maxLon);
+    final boolean cellIntersectsMBR(long minHash, long maxHash) {
+      long minLon = BitUtil.deinterleave(minHash);
+      long maxLon = BitUtil.deinterleave(maxHash);
+      // outside of bounding box
+      if (maxLon < geoPointQuery.minLonMBR || minLon > geoPointQuery.maxLonMBR) {
+        return false;
+      }
+
+      long minLat = BitUtil.deinterleave(minHash >>> 1);
+      long maxLat = BitUtil.deinterleave(maxHash >>> 1);
+      // outside of bounding box
+      if (maxLat < geoPointQuery.minLatMBR || minLat > geoPointQuery.maxLatMBR) {
+        return false;
+      }
+      return true;
     }
     
     /** 
