@@ -20,6 +20,7 @@ import org.apache.lucene.geo.Rectangle;
 import org.apache.lucene.index.PointValues.Relation;
 import org.apache.lucene.search.MultiTermQuery;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField.TermEncoding;
+import org.apache.lucene.spatial.util.GeoEncodingUtils;
 import org.apache.lucene.util.SloppyMath;
 
 /** Package private implementation for the public facing GeoPointDistanceQuery delegate class.
@@ -69,7 +70,11 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
     }
 
     @Override
-    protected Relation compare(double minLat, double maxLat, double minLon, double maxLon) {
+    protected Relation compare(long minHash, long maxHash) {
+      double minLon = GeoEncodingUtils.mortonUnhashLon(minHash);
+      double minLat = GeoEncodingUtils.mortonUnhashLat(minHash);
+      double maxLon = GeoEncodingUtils.mortonUnhashLon(maxHash);
+      double maxLat = GeoEncodingUtils.mortonUnhashLat(maxHash);
       // check bounding box
       if (maxLat < GeoPointDistanceQueryImpl.this.minLat ||
           maxLon < GeoPointDistanceQueryImpl.this.minLon ||
@@ -102,7 +107,10 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
      * {@link org.apache.lucene.util.SloppyMath#haversinMeters(double, double, double, double)} method.
      */
     @Override
-    protected boolean postFilter(final double lat, final double lon) {
+    protected boolean postFilter(long value) {
+      double lat = GeoEncodingUtils.mortonUnhashLat(value);
+      double lon = GeoEncodingUtils.mortonUnhashLon(value);
+
       // check bbox
       if (lat < minLat || lat > maxLat || lon < minLon || lon > maxLon) {
         return false;

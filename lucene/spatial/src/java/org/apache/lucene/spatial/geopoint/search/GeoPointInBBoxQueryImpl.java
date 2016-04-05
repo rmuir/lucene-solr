@@ -21,6 +21,7 @@ import org.apache.lucene.search.MultiTermQuery;
 import org.apache.lucene.util.SloppyMath;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField.TermEncoding;
+import org.apache.lucene.spatial.util.GeoEncodingUtils;
 import org.apache.lucene.spatial.util.GeoRelationUtils;
 
 /** Package private implementation for the public facing GeoPointInBBoxQuery delegate class.
@@ -74,7 +75,11 @@ class GeoPointInBBoxQueryImpl extends GeoPointMultiTermQuery {
     }
 
     @Override
-    protected Relation compare(double minLat, double maxLat, double minLon, double maxLon) {
+    protected Relation compare(long minHash, long maxHash) {
+      double minLon = GeoEncodingUtils.mortonUnhashLon(minHash);
+      double minLat = GeoEncodingUtils.mortonUnhashLat(minHash);
+      double maxLon = GeoEncodingUtils.mortonUnhashLon(maxHash);
+      double maxLat = GeoEncodingUtils.mortonUnhashLat(maxHash);
       if (GeoRelationUtils.rectWithin(minLat, maxLat, minLon, maxLon, 
                                       GeoPointInBBoxQueryImpl.this.minLat,
                                       GeoPointInBBoxQueryImpl.this.maxLat,
@@ -93,7 +98,9 @@ class GeoPointInBBoxQueryImpl extends GeoPointMultiTermQuery {
     }
 
     @Override
-    protected boolean postFilter(final double lat, final double lon) {
+    protected boolean postFilter(long value) {
+      double lat = GeoEncodingUtils.mortonUnhashLat(value);
+      double lon = GeoEncodingUtils.mortonUnhashLon(value);
       return GeoRelationUtils.pointInRectPrecise(lat, lon, minLat, maxLat, minLon, maxLon);
     }
   }

@@ -64,25 +64,14 @@ final class GeoPointInPolygonQueryImpl extends GeoPointInBBoxQueryImpl {
     protected Relation compare(long minHash, long maxHash) {
       long minLon = BitUtil.deinterleave(minHash);
       long minLat = BitUtil.deinterleave(minHash >>> 1);
-      
       long maxLon = BitUtil.deinterleave(maxHash);
       long maxLat = BitUtil.deinterleave(maxHash >>> 1);
       return grid.relate(minLat, maxLat, minLon, maxLon);
     }
 
     @Override
-    protected boolean postFilter(long hash) {
-      return grid.contains(BitUtil.deinterleave(hash >>> 1), BitUtil.deinterleave(hash));
-    }
-
-    @Override
-    protected Relation compare(double minLat, double maxLat, double minLon, double maxLon) {
-      throw new AssertionError();
-    }
-
-    @Override
-    protected boolean postFilter(double lat, double lon) {
-      throw new AssertionError();
+    protected boolean postFilter(long value) {
+      return grid.contains(BitUtil.deinterleave(value >>> 1), BitUtil.deinterleave(value));
     }
   }
 
