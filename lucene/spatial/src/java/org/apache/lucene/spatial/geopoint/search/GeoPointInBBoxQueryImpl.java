@@ -18,6 +18,7 @@ package org.apache.lucene.spatial.geopoint.search;
 
 import org.apache.lucene.index.PointValues.Relation;
 import org.apache.lucene.search.MultiTermQuery;
+import org.apache.lucene.util.BitUtil;
 import org.apache.lucene.util.SloppyMath;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField.TermEncoding;
@@ -99,8 +100,15 @@ class GeoPointInBBoxQueryImpl extends GeoPointMultiTermQuery {
 
     @Override
     protected boolean postFilter(long value) {
-      double lat = GeoEncodingUtils.mortonUnhashLat(value);
-      double lon = GeoEncodingUtils.mortonUnhashLon(value);
+      // TODO: if we fix rounding in the encoding, we can remove post-filtering completely for box query
+      long lonBits = BitUtil.deinterleave(value);
+      long latBits = BitUtil.deinterleave(value >>> 1);
+      if (lonBits < minLonMBR || lonBits > maxLonMBR || latBits < minLatMBR || latBits > maxLatMBR) {
+        return false;
+      }
+      
+      double lat = GeoEncodingUtils.unscaleLat(latBits);
+      double lon = GeoEncodingUtils.unscaleLon(lonBits);
       return GeoRelationUtils.pointInRectPrecise(lat, lon, minLat, maxLat, minLon, maxLon);
     }
   }

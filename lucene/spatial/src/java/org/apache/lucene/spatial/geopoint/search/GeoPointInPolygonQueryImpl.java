@@ -62,6 +62,7 @@ final class GeoPointInPolygonQueryImpl extends GeoPointInBBoxQueryImpl {
    
     @Override
     protected Relation compare(long minHash, long maxHash) {
+      // grid already does bbox check (grid cannot avoid this)
       long minLon = BitUtil.deinterleave(minHash);
       long minLat = BitUtil.deinterleave(minHash >>> 1);
       long maxLon = BitUtil.deinterleave(maxHash);
@@ -71,6 +72,7 @@ final class GeoPointInPolygonQueryImpl extends GeoPointInBBoxQueryImpl {
 
     @Override
     protected boolean postFilter(long value) {
+      // grid already does bbox check (grid cannot avoid this)
       return grid.contains(BitUtil.deinterleave(value >>> 1), BitUtil.deinterleave(value));
     }
   }

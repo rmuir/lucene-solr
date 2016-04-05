@@ -21,6 +21,7 @@ import org.apache.lucene.index.PointValues.Relation;
 import org.apache.lucene.search.MultiTermQuery;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField.TermEncoding;
 import org.apache.lucene.spatial.util.GeoEncodingUtils;
+import org.apache.lucene.util.BitUtil;
 import org.apache.lucene.util.SloppyMath;
 
 /** Package private implementation for the public facing GeoPointDistanceQuery delegate class.
@@ -71,17 +72,27 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
 
     @Override
     protected Relation compare(long minHash, long maxHash) {
-      double minLon = GeoEncodingUtils.mortonUnhashLon(minHash);
-      double minLat = GeoEncodingUtils.mortonUnhashLat(minHash);
-      double maxLon = GeoEncodingUtils.mortonUnhashLon(maxHash);
-      double maxLat = GeoEncodingUtils.mortonUnhashLat(maxHash);
-      // check bounding box
-      if (maxLat < GeoPointDistanceQueryImpl.this.minLat ||
-          maxLon < GeoPointDistanceQueryImpl.this.minLon ||
-          minLat > GeoPointDistanceQueryImpl.this.maxLat ||
-          minLon > GeoPointDistanceQueryImpl.this.maxLon) {
+      long minLonBits = BitUtil.deinterleave(minHash);
+      long maxLonBits = BitUtil.deinterleave(maxHash);
+      // outside of bounding box
+      if (maxLonBits < geoPointQuery.minLonMBR || minLonBits > geoPointQuery.maxLonMBR) {
         return Relation.CELL_OUTSIDE_QUERY;
-      } else if (maxLon - centerLon < 90 && centerLon - minLon < 90 &&
+      }
+
+      long minLatBits = BitUtil.deinterleave(minHash >>> 1);
+      long maxLatBits = BitUtil.deinterleave(maxHash >>> 1);
+      // outside of bounding box
+      if (maxLatBits < geoPointQuery.minLatMBR || minLatBits > geoPointQuery.maxLatMBR) {
+        return Relation.CELL_OUTSIDE_QUERY;
+      }
+      
+      // decode and detect INSIDE or OUTSIDE
+      double minLon = GeoEncodingUtils.unscaleLon(minLonBits);
+      double minLat = GeoEncodingUtils.unscaleLat(minLatBits);
+      double maxLon = GeoEncodingUtils.unscaleLon(maxLonBits);
+      double maxLat = GeoEncodingUtils.unscaleLat(maxLatBits);
+      
+      if (maxLon - centerLon < 90 && centerLon - minLon < 90 &&
           SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, minLat, minLon) <= distanceQuery.radiusMeters &&
           SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, minLat, maxLon) <= distanceQuery.radiusMeters &&
           SloppyMath.haversinMeters(distanceQuery.centerLat, centerLon, maxLat, minLon) <= distanceQuery.radiusMeters &&
@@ -108,13 +119,14 @@ final class GeoPointDistanceQueryImpl extends GeoPointInBBoxQueryImpl {
      */
     @Override
     protected boolean postFilter(long value) {
-      double lat = GeoEncodingUtils.mortonUnhashLat(value);
-      double lon = GeoEncodingUtils.mortonUnhashLon(value);
-
-      // check bbox
-      if (lat < minLat || lat > maxLat || lon < minLon || lon > maxLon) {
+      long lonBits = BitUtil.deinterleave(value);
+      long latBits = BitUtil.deinterleave(value >>> 1);
+      if (lonBits < minLonMBR || lonBits > maxLonMBR || latBits < minLatMBR || latBits > maxLatMBR) {
         return false;
       }
+      
+      double lat = GeoEncodingUtils.unscaleLat(latBits);
+      double lon = GeoEncodingUtils.unscaleLon(lonBits);
 
       // first check the partial distance, if its more than that, it can't be <= radiusMeters
       double h1 = SloppyMath.haversinSortKey(distanceQuery.centerLat, centerLon, lat, lon);

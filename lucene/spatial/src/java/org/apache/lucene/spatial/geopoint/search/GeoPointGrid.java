@@ -25,11 +25,9 @@ import org.apache.lucene.util.FixedBitSet;
 /**
  * This is a temporary hack, until some polygon methods have better performance!
  * <p>
- * When this file is removed then we have made good progress! In general we don't call
- * the point-in-polygon algorithm that much, because of how BKD divides up the data. But
- * today the method is very slow (general to all polygons, linear with the number of vertices).
- * At the same time polygon-rectangle relation operations are also slow in the same way, this
- * just really ensures they are the bottleneck by removing most of the point-in-polygon calls.
+ * When this file is removed then we have made good progress! Today point-in-polygon method 
+ * is very slow (general to all polygons, linear with the number of vertices).
+ * At the same time polygon-rectangle relation operations are also slow in the same way.
  * <p>
  * See the "grid" algorithm description here: http://erich.realtimerendering.com/ptinpoly/
  * A few differences:
@@ -42,8 +40,14 @@ import org.apache.lucene.util.FixedBitSet;
  *   <li> Instead we construct a baby tree to reduce the number of relation operations,
  *        which are currently expensive.
  * </ul>
+ * <p>
+ * We also accelerate relational operations. For some rectangles, we may know the 
+ * correct answer from the grid. This is currently limited due to the grid's size
+ * (impacts the percentage of cells it knows the answer for) and the way in which
+ * this is encoded.
  */
-// TODO: can we improve the 1D tree to better work with z-encoded ranges. it can be more efficient.
+// TODO: can we improve the relations tree to better work with z-encoding directly?
+//       or should we just cutover to a 2D kd tree for relations?
 final class GeoPointGrid {
   // must be a power of two!
   private static final int GRID_SIZE = 1<<5;
@@ -61,10 +65,10 @@ final class GeoPointGrid {
   
   private final Polygon[] polygons;
   
-  // 1D "tree" for relations
+  // 1D "tree" for relations: these are indexed in morton space.
   private final FixedBitSet crosses = new FixedBitSet(GRID_SIZE * GRID_SIZE);
   private final FixedBitSet outside = new FixedBitSet(GRID_SIZE * GRID_SIZE);
-  private final FixedBitSet inside = new FixedBitSet(GRID_SIZE * GRID_SIZE);
+  private final FixedBitSet inside =  new FixedBitSet(GRID_SIZE * GRID_SIZE);
   
   GeoPointGrid(long minLat, long maxLat, long minLon, long maxLon, Polygon... polygons) {
     this.minLat = minLat;
@@ -203,8 +207,9 @@ final class GeoPointGrid {
     if (minLat <= this.minLat && maxLat >= this.maxLat && minLon <= this.minLon && maxLon >= this.maxLon) {
       return Relation.CELL_CROSSES_QUERY;
     }
-    // otherwise, heavier stuff
     
+    // otherwise, scan for the first set bit in crosses, inside, outside to do relations when we can.
+    // this is very coarse due to z-order space and only used to accelerate INSIDE and OUTSIDE responses. 
     if (minLat >= this.minLat && maxLat <= this.maxLat && minLon >= this.minLon && maxLon <= this.maxLon) {
       // its fully within our box. it stands a chance of being contains or outside
       int lower = zIndex(minLat, minLon);

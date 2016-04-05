@@ -38,10 +38,6 @@ import org.apache.lucene.util.DocIdSetBuilder;
 import org.apache.lucene.util.FixedBitSet;
 import org.apache.lucene.util.SparseFixedBitSet;
 
-import static org.apache.lucene.spatial.util.GeoEncodingUtils.mortonUnhashLat;
-import static org.apache.lucene.spatial.util.GeoEncodingUtils.mortonUnhashLon;
-
-
 /**
  * Custom ConstantScoreWrapper for {@code GeoPointMultiTermQuery} that cuts over to DocValues
  * for post filtering boundary ranges. Multi-valued GeoPoint documents are supported.
