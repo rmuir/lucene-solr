@@ -62,6 +62,11 @@ final class GeoPointGrid {
   
   private final Polygon[] polygons;
   
+  // 1D "tree" for relations
+  private final FixedBitSet crosses = new FixedBitSet(GRID_SIZE * GRID_SIZE);
+  private final FixedBitSet outside = new FixedBitSet(GRID_SIZE * GRID_SIZE);
+  private final FixedBitSet inside = new FixedBitSet(GRID_SIZE * GRID_SIZE);
+  
   GeoPointGrid(long minLat, long maxLat, long minLon, long maxLon, Polygon... polygons) {
     this.minLat = minLat;
     this.maxLat = maxLat;
@@ -109,14 +114,25 @@ final class GeoPointGrid {
       for (int i = minLatIndex; i < maxLatIndex; i++) {
         for (int j = minLonIndex; j < maxLonIndex; j++) {
           int index = i * GRID_SIZE + j;
+          int zIndex = (int) BitUtil.interleave(j, i);
           assert haveAnswer.get(index) == false;
+          assert inside.get(zIndex) == false;
+          assert outside.get(zIndex) == false;
+          assert crosses.get(zIndex) == false;
           haveAnswer.set(index);
           if (relation == Relation.CELL_INSIDE_QUERY) {
             answer.set(index);
+            inside.set(zIndex);
+          } else {
+            outside.set(zIndex);
           }
         }
       }
     } else if (minLatIndex == maxLatIndex - 1) {
+      assert minLonIndex == maxLonIndex - 1;
+      int zIndex = (int) BitUtil.interleave(minLonIndex, minLatIndex);
+      assert crosses.get(zIndex) == false;
+      crosses.set(zIndex);
       // nothing more to do: this is a single grid cell (leaf node) and
       // is an edge case for the polygon.
     } else {
@@ -158,5 +174,20 @@ final class GeoPointGrid {
     int latIndex = (int) (latRel / latPerCell);
     int lonIndex = (int) (lonRel / lonPerCell);
     return latIndex * GRID_SIZE + lonIndex;
+  }
+  
+  Relation relate(long minLat, long maxLat, long minLon, long maxLon) {
+    // if the bounding boxes are disjoint then the shape does not cross
+    if (maxLon < this.minLon || minLon > this.maxLon || maxLat < this.minLat || minLat > this.maxLat) {
+      return Relation.CELL_OUTSIDE_QUERY;
+    }
+    // if the rectangle fully encloses us, we cross.
+    if (minLat <= this.minLat && maxLat >= this.maxLat && minLon <= this.minLon && maxLon >= this.maxLon) {
+      return Relation.CELL_CROSSES_QUERY;
+    }
+    return Polygon.relate(polygons, GeoEncodingUtils.unscaleLat(minLat), 
+                                    GeoEncodingUtils.unscaleLat(maxLat), 
+                                    GeoEncodingUtils.unscaleLon(minLon), 
+                                    GeoEncodingUtils.unscaleLon(maxLon));
   }
 }
