@@ -96,7 +96,7 @@ final class GeoPointPrefixTermsEnum extends GeoPointTermsEnum {
       isWithin = false;
       Relation relation = Relation.CELL_OUTSIDE_QUERY;
       if (shift == maxShift) {
-        relation = relationImpl.compare(minLat, maxLat, minLon, maxLon);
+        relation = relationImpl.compare(currStart, currEnd);
       }
       // within or a boundary
       if (relation != Relation.CELL_OUTSIDE_QUERY) {

@@ -91,7 +91,7 @@ final class GeoPointNumericTermsEnum extends GeoPointTermsEnum {
     // otherwise, we only need the MBR check
     Relation relation = Relation.CELL_OUTSIDE_QUERY;
     if (res % GeoPointField.PRECISION_STEP == 0 || level == DETAIL_LEVEL) {
-      relation = relationImpl.compare(minLat, maxLat, minLon, maxLon);
+      relation = relationImpl.compare(start, end);
     }
     if (relation != Relation.CELL_OUTSIDE_QUERY) {
       final short nextRes = (short)(res-1);

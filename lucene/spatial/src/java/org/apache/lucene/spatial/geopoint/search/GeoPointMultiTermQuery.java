@@ -133,6 +133,20 @@ abstract class GeoPointMultiTermQuery extends MultiTermQuery {
     /** 
      * Called for non-leaf cells to test how the cell relates to the query, to
      * determine how to further recurse down the tree. 
+     * <p>
+     * The default implementation decodes the hashes to doubles and calls {@link #compare(double, double, double, double)}.
+     */
+    protected Relation compare(long minHash, long maxHash) {
+      double minLon = GeoEncodingUtils.mortonUnhashLon(minHash);
+      double minLat = GeoEncodingUtils.mortonUnhashLat(minHash);
+      double maxLon = GeoEncodingUtils.mortonUnhashLon(maxHash);
+      double maxLat = GeoEncodingUtils.mortonUnhashLat(maxHash);
+      return compare(minLat, maxLat, minLon, maxLon);
+    }
+    
+    /** 
+     * Called for non-leaf cells to test how the cell relates to the query, to
+     * determine how to further recurse down the tree. 
      */
     protected abstract Relation compare(double minLat, double maxLat, double minLon, double maxLon);
     

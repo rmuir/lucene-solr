@@ -176,6 +176,25 @@ final class GeoPointGrid {
     return latIndex * GRID_SIZE + lonIndex;
   }
   
+  /** Returns z-index of lat/lon, or -1 if the value is outside of the bounding box. */
+  private int zIndex(long latitude, long longitude) {
+    if (latitude < minLat || latitude > maxLat || longitude < minLon || longitude > maxLon) {
+      return -1; // outside of bounding box range
+    }
+    
+    long latRel = latitude - minLat;
+    long lonRel = longitude - minLon;
+    
+    int latIndex = (int) (latRel / latPerCell);
+    int lonIndex = (int) (lonRel / lonPerCell);
+    return (int) BitUtil.interleave(lonIndex, latIndex);
+  }
+  
+  boolean scan(FixedBitSet bitset, int minIndex, int maxIndex) {
+    int index = bitset.nextSetBit(minIndex);
+    return index >= 0 && index <= maxIndex;
+  }
+
   Relation relate(long minLat, long maxLat, long minLon, long maxLon) {
     // if the bounding boxes are disjoint then the shape does not cross
     if (maxLon < this.minLon || minLon > this.maxLon || maxLat < this.minLat || minLat > this.maxLat) {
@@ -185,9 +204,31 @@ final class GeoPointGrid {
     if (minLat <= this.minLat && maxLat >= this.maxLat && minLon <= this.minLon && maxLon >= this.maxLon) {
       return Relation.CELL_CROSSES_QUERY;
     }
-    return Polygon.relate(polygons, GeoEncodingUtils.unscaleLat(minLat), 
-                                    GeoEncodingUtils.unscaleLat(maxLat), 
-                                    GeoEncodingUtils.unscaleLon(minLon), 
-                                    GeoEncodingUtils.unscaleLon(maxLon));
+    // otherwise, heavier stuff
+    
+    if (minLat >= this.minLat && maxLat <= this.maxLat && minLon >= this.minLon && maxLon <= this.maxLon) {
+      // its fully within our box. it stands a chance of being contains.
+      int lower = zIndex(minLat, minLon);
+      int upper = zIndex(maxLat, maxLon);
+      assert upper >= lower;
+      if (scan(crosses, lower, upper)) {
+        return Relation.CELL_CROSSES_QUERY;
+      } else if (scan(outside, lower, upper) == false) {
+        return Relation.CELL_INSIDE_QUERY;
+      } else {
+        return Relation.CELL_OUTSIDE_QUERY;
+      }
+    } else {
+      // no chance of being contained, at least part of rectangle is outside.
+      // just try to determine if we cross: which is if the subset that is inside has any hits
+      int lower = zIndex(Math.max(minLat, this.minLat), Math.max(minLon, this.minLon));
+      int upper = zIndex(Math.min(maxLat, this.maxLat), Math.min(maxLon, this.maxLon));
+      assert upper >= lower;
+      if (scan(inside, lower, upper) || scan(crosses, lower, upper)) {
+        return Relation.CELL_CROSSES_QUERY;
+      } else {
+        return Relation.CELL_OUTSIDE_QUERY;
+      }
+    }
   }
 }
