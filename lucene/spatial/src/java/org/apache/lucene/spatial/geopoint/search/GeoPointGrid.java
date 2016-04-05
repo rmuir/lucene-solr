@@ -212,7 +212,14 @@ final class GeoPointGrid {
       int upper = zIndex(maxLat, maxLon);
       assert upper >= lower;
       if (scan(crosses, lower, upper)) {
-        return Relation.CELL_CROSSES_QUERY;
+        if (scan(inside, lower, upper) && scan(outside, lower, upper)) {
+          return Relation.CELL_CROSSES_QUERY;
+        } else {
+          return Polygon.relate(polygons, GeoEncodingUtils.unscaleLat(minLat), 
+                                        GeoEncodingUtils.unscaleLat(maxLat), 
+                                        GeoEncodingUtils.unscaleLon(minLon), 
+                                        GeoEncodingUtils.unscaleLon(maxLon));
+        }
       } else if (scan(outside, lower, upper) == false) {
         return Relation.CELL_INSIDE_QUERY;
       } else {
@@ -224,8 +231,14 @@ final class GeoPointGrid {
       int lower = zIndex(Math.max(minLat, this.minLat), Math.max(minLon, this.minLon));
       int upper = zIndex(Math.min(maxLat, this.maxLat), Math.min(maxLon, this.maxLon));
       assert upper >= lower;
-      if (scan(inside, lower, upper) || scan(crosses, lower, upper)) {
+      if (scan(inside, lower, upper)) {
+        // some is inside, some is outside, we cross
         return Relation.CELL_CROSSES_QUERY;
+      } else if (scan(crosses, lower, upper)) {
+        return Polygon.relate(polygons, GeoEncodingUtils.unscaleLat(minLat), 
+                                        GeoEncodingUtils.unscaleLat(maxLat), 
+                                        GeoEncodingUtils.unscaleLon(minLon), 
+                                        GeoEncodingUtils.unscaleLon(maxLon));
       } else {
         return Relation.CELL_OUTSIDE_QUERY;
       }

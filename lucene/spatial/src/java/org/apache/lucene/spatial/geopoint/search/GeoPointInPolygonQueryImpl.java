@@ -88,7 +88,6 @@ final class GeoPointInPolygonQueryImpl extends GeoPointInBBoxQueryImpl {
     @Override
     protected Relation compare(double minLat, double maxLat, double minLon, double maxLon) {
       throw new AssertionError();
-      //return Polygon.relate(polygons, minLat, maxLat, minLon, maxLon);
     }
 
     @Override
