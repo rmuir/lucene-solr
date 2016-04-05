@@ -89,10 +89,7 @@ final class GeoPointGrid {
     // but it prevents edge case bugs.
     latPerCell = latitudeRange / (GRID_SIZE - 1);
     lonPerCell = longitudeRange / (GRID_SIZE - 1);
-    // long ms = System.currentTimeMillis();
     fill(0, GRID_SIZE, 0, GRID_SIZE);
-    // System.out.println("construction time: " + (System.currentTimeMillis() - ms) + 
-    //                    " ms, fill pct: " + 100 * haveAnswer.cardinality() / (float) haveAnswer.length());
   }
   
   /** fills a 2D range of grid cells [minLatIndex .. maxLatIndex) X [minLonIndex .. maxLonIndex) */
@@ -209,36 +206,45 @@ final class GeoPointGrid {
     }
     
     // otherwise, scan for the first set bit in crosses, inside, outside to do relations when we can.
-    // this is very coarse due to z-order space and only used to accelerate INSIDE and OUTSIDE responses. 
+    // this is very coarse due to z-order space and only used to accelerate INSIDE and OUTSIDE responses.
+    // basically: we can only reason about the lack of set bits.
     if (minLat >= this.minLat && maxLat <= this.maxLat && minLon >= this.minLon && maxLon <= this.maxLon) {
-      // its fully within our box. it stands a chance of being contains or outside
+      // its fully within our box. it stands a chance of being INSIDE
       int lower = zIndex(minLat, minLon);
       int upper = zIndex(maxLat, maxLon);
       assert upper >= lower;
-      if (scan(crosses, lower, upper)) {
-        return Polygon.relate(polygons, GeoEncodingUtils.unscaleLat(minLat), 
-                                        GeoEncodingUtils.unscaleLat(maxLat), 
-                                        GeoEncodingUtils.unscaleLon(minLon), 
-                                        GeoEncodingUtils.unscaleLon(maxLon));
-      } else if (scan(outside, lower, upper) == false) {
-        return Relation.CELL_INSIDE_QUERY;
-      } else {
-        return Relation.CELL_OUTSIDE_QUERY;
+      
+      // if crosses is empty then we know everything
+      if (scan(crosses, lower, upper) == false) {
+        // fully inside query
+        if (scan(outside, lower, upper) == false) {
+          return Relation.CELL_INSIDE_QUERY;
+        }
+        // fully outside query
+        if (scan(inside, lower, upper) == false) {
+          return Relation.CELL_OUTSIDE_QUERY;
+        }
       }
     } else {
-      // no chance of being contained, at least part of rectangle is outside.
-      // just try to determine if we are fully outside
+      // no chance of being INSIDE, at least part of rectangle is outside.
+      // just try to determine if the overlapping portion is disjoint
       int lower = zIndex(Math.max(minLat, this.minLat), Math.max(minLon, this.minLon));
       int upper = zIndex(Math.min(maxLat, this.maxLat), Math.min(maxLon, this.maxLon));
       assert upper >= lower;
-      if (scan(inside, lower, upper) == false && scan(crosses, lower, upper) == false) {
-        return Relation.CELL_OUTSIDE_QUERY;
-      } else {
-        return Polygon.relate(polygons, GeoEncodingUtils.unscaleLat(minLat), 
-                                        GeoEncodingUtils.unscaleLat(maxLat), 
-                                        GeoEncodingUtils.unscaleLon(minLon), 
-                                        GeoEncodingUtils.unscaleLon(maxLon));
+      
+      // if crosses is empty then we know everything
+      if (scan(crosses, lower, upper) == false) {
+        // fully outside query
+        if (scan(inside, lower, upper) == false) {
+          return Relation.CELL_OUTSIDE_QUERY;
+        }
       }
     }
+    
+    // otherwise fall back to a real computation
+    return Polygon.relate(polygons, GeoEncodingUtils.unscaleLat(minLat), 
+                                    GeoEncodingUtils.unscaleLat(maxLat), 
+                                    GeoEncodingUtils.unscaleLon(minLon), 
+                                    GeoEncodingUtils.unscaleLon(maxLon));
   }
 }
