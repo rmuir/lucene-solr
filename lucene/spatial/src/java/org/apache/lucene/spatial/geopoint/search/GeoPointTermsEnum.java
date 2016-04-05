@@ -98,8 +98,8 @@ abstract class GeoPointTermsEnum extends FilteredTermsEnum {
     return AcceptStatus.YES;
   }
 
-  protected boolean postFilter(final double lat, final double lon) {
-    return relationImpl.postFilter(lat, lon);
+  protected boolean postFilter(long hash) {
+    return relationImpl.postFilter(hash);
   }
 
   /**

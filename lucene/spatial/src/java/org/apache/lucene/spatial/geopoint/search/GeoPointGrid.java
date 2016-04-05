@@ -19,6 +19,7 @@ package org.apache.lucene.spatial.geopoint.search;
 import org.apache.lucene.geo.Polygon;
 import org.apache.lucene.index.PointValues.Relation;
 import org.apache.lucene.spatial.util.GeoEncodingUtils;
+import org.apache.lucene.util.BitUtil;
 import org.apache.lucene.util.FixedBitSet;
 
 /**
@@ -43,6 +44,7 @@ import org.apache.lucene.util.FixedBitSet;
  * </ul>
  */
 // TODO: relations?
+// TODO: benchmark if this helps geopoint distance
 final class GeoPointGrid {
   // must be a power of two!
   private static final int GRID_SIZE = 1<<5;
@@ -79,9 +81,10 @@ final class GeoPointGrid {
     // but it prevents edge case bugs.
     latPerCell = latitudeRange / (GRID_SIZE - 1);
     lonPerCell = longitudeRange / (GRID_SIZE - 1);
-    long ms = System.currentTimeMillis();
+    // long ms = System.currentTimeMillis();
     fill(0, GRID_SIZE, 0, GRID_SIZE);
-    //System.out.println("construction time: " + (System.currentTimeMillis() - ms) + " ms, fill pct: " + 100 * haveAnswer.cardinality() / (float) haveAnswer.length());
+    // System.out.println("construction time: " + (System.currentTimeMillis() - ms) + 
+    //                    " ms, fill pct: " + 100 * haveAnswer.cardinality() / (float) haveAnswer.length());
   }
   
   /** fills a 2D range of grid cells [minLatIndex .. maxLatIndex) X [minLonIndex .. maxLonIndex) */

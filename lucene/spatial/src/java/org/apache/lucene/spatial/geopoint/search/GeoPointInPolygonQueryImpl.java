@@ -20,6 +20,8 @@ import java.util.Objects;
 
 import org.apache.lucene.search.MultiTermQuery;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField.TermEncoding;
+import org.apache.lucene.spatial.util.GeoEncodingUtils;
+import org.apache.lucene.util.BitUtil;
 import org.apache.lucene.geo.Polygon;
 import org.apache.lucene.index.PointValues.Relation;
 
@@ -30,12 +32,28 @@ import org.apache.lucene.index.PointValues.Relation;
 final class GeoPointInPolygonQueryImpl extends GeoPointInBBoxQueryImpl {
   private final GeoPointInPolygonQuery polygonQuery;
   private final Polygon[] polygons;
+  private final GeoPointGrid grid;
 
   GeoPointInPolygonQueryImpl(final String field, final TermEncoding termEncoding, final GeoPointInPolygonQuery q,
                              final double minLat, final double maxLat, final double minLon, final double maxLon) {
     super(field, termEncoding, minLat, maxLat, minLon, maxLon);
     this.polygonQuery = Objects.requireNonNull(q);
     this.polygons = Objects.requireNonNull(q.polygons);
+    long minLatBits = GeoEncodingUtils.scaleLat(minLat);
+    long maxLatBits = GeoEncodingUtils.scaleLat(maxLat);
+    long minLonBits = GeoEncodingUtils.scaleLon(minLon);
+    long maxLonBits = GeoEncodingUtils.scaleLon(maxLon);
+    // note: we currently have inconsistent rounding and overflow issues so we oversize the bounding box by 1 geopoint ulp in each direction
+    // these should all be numbers in positive space at the moment: if this changes, lets fix the rounding while we are there!
+    assert minLatBits >= 0 && minLatBits <= 1L + Integer.MAX_VALUE;
+    assert maxLatBits >= 0 && maxLatBits <= 1L + Integer.MAX_VALUE;
+    assert minLonBits >= 0 && minLonBits <= 1L + Integer.MAX_VALUE;
+    assert maxLonBits >= 0 && maxLonBits <= 1L + Integer.MAX_VALUE;
+    this.grid = new GeoPointGrid(Math.max(0, minLatBits-1), 
+                                 Math.min(1L + Integer.MAX_VALUE, maxLatBits+1), 
+                                 Math.max(0, minLonBits-1), 
+                                 Math.min(1L + Integer.MAX_VALUE, maxLonBits+1),
+                                 polygons);
   }
 
   @Override
@@ -62,16 +80,14 @@ final class GeoPointInPolygonQueryImpl extends GeoPointInBBoxQueryImpl {
       return Polygon.relate(polygons, minLat, maxLat, minLon, maxLon);
     }
 
-    /**
-     * The two-phase query approach. The parent
-     * {@link org.apache.lucene.spatial.geopoint.search.GeoPointTermsEnum#accept} method is called to match
-     * encoded terms that fall within the bounding box of the polygon. Those documents that pass the initial
-     * bounding box filter are then compared to the provided polygon using the
-     * {@link Polygon#contains(Polygon[], double, double)} method.
-     */
     @Override
-    protected boolean postFilter(final double lat, final double lon) {
-      return Polygon.contains(polygons, lat, lon);
+    protected boolean postFilter(long hash) {
+      return grid.contains(BitUtil.deinterleave(hash >>> 1), BitUtil.deinterleave(hash));
+    }
+
+    @Override
+    protected boolean postFilter(double lat, double lon) {
+      throw new AssertionError();
     }
   }
 

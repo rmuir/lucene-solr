@@ -28,6 +28,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.util.AttributeSource;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField;
 import org.apache.lucene.spatial.geopoint.document.GeoPointField.TermEncoding;
+import org.apache.lucene.spatial.util.GeoEncodingUtils;
 import org.apache.lucene.spatial.util.GeoRelationUtils;
 import org.apache.lucene.geo.GeoUtils;
 import org.apache.lucene.util.SloppyMath;
@@ -134,6 +135,15 @@ abstract class GeoPointMultiTermQuery extends MultiTermQuery {
      * determine how to further recurse down the tree. 
      */
     protected abstract Relation compare(double minLat, double maxLat, double minLon, double maxLon);
+    
+    /**
+     * Called for leaf cells to test if the point is in the query
+     * <p>
+     * The default implementation decodes the hash to doubles and calls {@link #postFilter(double, double)}.
+     */
+    protected boolean postFilter(long hash) {
+      return postFilter(GeoEncodingUtils.mortonUnhashLat(hash), GeoEncodingUtils.mortonUnhashLon(hash));
+    }
 
     /**
      * Called for leaf cells to test if the point is in the query
