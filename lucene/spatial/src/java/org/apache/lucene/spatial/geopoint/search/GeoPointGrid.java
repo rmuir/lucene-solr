@@ -43,8 +43,7 @@ import org.apache.lucene.util.FixedBitSet;
  *        which are currently expensive.
  * </ul>
  */
-// TODO: relations?
-// TODO: benchmark if this helps geopoint distance
+// TODO: can we improve the 1D tree to better work with z-encoded ranges. it can be more efficient.
 final class GeoPointGrid {
   // must be a power of two!
   private static final int GRID_SIZE = 1<<5;
@@ -176,11 +175,9 @@ final class GeoPointGrid {
     return latIndex * GRID_SIZE + lonIndex;
   }
   
-  /** Returns z-index of lat/lon, or -1 if the value is outside of the bounding box. */
+  /** Returns z-index of lat/lon. do not call for ranges outside of the bounding box. */
   private int zIndex(long latitude, long longitude) {
-    if (latitude < minLat || latitude > maxLat || longitude < minLon || longitude > maxLon) {
-      return -1; // outside of bounding box range
-    }
+    assert latitude >= minLat && latitude <= maxLat && longitude >= minLon && longitude <= maxLon;
     
     long latRel = latitude - minLat;
     long lonRel = longitude - minLon;
@@ -190,11 +187,13 @@ final class GeoPointGrid {
     return (int) BitUtil.interleave(lonIndex, latIndex);
   }
   
-  boolean scan(FixedBitSet bitset, int minIndex, int maxIndex) {
+  /** scans bits from [minIndex .. maxIndex] and returns true if one is found */
+  private boolean scan(FixedBitSet bitset, int minIndex, int maxIndex) {
     int index = bitset.nextSetBit(minIndex);
     return index >= 0 && index <= maxIndex;
   }
 
+  /** Returns relation of bounding box to these polygons */
   Relation relate(long minLat, long maxLat, long minLon, long maxLon) {
     // if the bounding boxes are disjoint then the shape does not cross
     if (maxLon < this.minLon || minLon > this.maxLon || maxLat < this.minLat || minLat > this.maxLat) {
@@ -207,19 +206,15 @@ final class GeoPointGrid {
     // otherwise, heavier stuff
     
     if (minLat >= this.minLat && maxLat <= this.maxLat && minLon >= this.minLon && maxLon <= this.maxLon) {
-      // its fully within our box. it stands a chance of being contains.
+      // its fully within our box. it stands a chance of being contains or outside
       int lower = zIndex(minLat, minLon);
       int upper = zIndex(maxLat, maxLon);
       assert upper >= lower;
       if (scan(crosses, lower, upper)) {
-        if (scan(inside, lower, upper) && scan(outside, lower, upper)) {
-          return Relation.CELL_CROSSES_QUERY;
-        } else {
-          return Polygon.relate(polygons, GeoEncodingUtils.unscaleLat(minLat), 
+        return Polygon.relate(polygons, GeoEncodingUtils.unscaleLat(minLat), 
                                         GeoEncodingUtils.unscaleLat(maxLat), 
                                         GeoEncodingUtils.unscaleLon(minLon), 
                                         GeoEncodingUtils.unscaleLon(maxLon));
-        }
       } else if (scan(outside, lower, upper) == false) {
         return Relation.CELL_INSIDE_QUERY;
       } else {
@@ -227,20 +222,17 @@ final class GeoPointGrid {
       }
     } else {
       // no chance of being contained, at least part of rectangle is outside.
-      // just try to determine if we cross: which is if the subset that is inside has any hits
+      // just try to determine if we are fully outside
       int lower = zIndex(Math.max(minLat, this.minLat), Math.max(minLon, this.minLon));
       int upper = zIndex(Math.min(maxLat, this.maxLat), Math.min(maxLon, this.maxLon));
       assert upper >= lower;
-      if (scan(inside, lower, upper)) {
-        // some is inside, some is outside, we cross
-        return Relation.CELL_CROSSES_QUERY;
-      } else if (scan(crosses, lower, upper)) {
+      if (scan(inside, lower, upper) == false && scan(crosses, lower, upper) == false) {
+        return Relation.CELL_OUTSIDE_QUERY;
+      } else {
         return Polygon.relate(polygons, GeoEncodingUtils.unscaleLat(minLat), 
                                         GeoEncodingUtils.unscaleLat(maxLat), 
                                         GeoEncodingUtils.unscaleLon(minLon), 
                                         GeoEncodingUtils.unscaleLon(maxLon));
-      } else {
-        return Relation.CELL_OUTSIDE_QUERY;
       }
     }
   }
