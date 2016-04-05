@@ -50,8 +50,8 @@ public class TestGeoPointGrid extends LuceneTestCase {
       }
       // check some truly random points too
       for (int j = 0; j < 5000; j++) {
-        int lat = random().nextInt();
-        int lon = random().nextInt();
+        long lat = TestUtil.nextLong(random(), 0, Integer.MAX_VALUE);
+        long lon = TestUtil.nextLong(random(), 0, Integer.MAX_VALUE);
 
         boolean expected = polygon.contains(GeoEncodingUtils.unscaleLat(lat), 
                                             GeoEncodingUtils.unscaleLon(lon));
