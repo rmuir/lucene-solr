@@ -63,7 +63,9 @@ public class TestLatLonGrid extends LuceneTestCase {
   /** relate() should always be consistent with underlying polygon */
   public void testRelateRandom() throws Exception {
     for (int i = 0; i < 100; i++) {
+      //System.out.println("\nTEST: iter=" + i);
       Polygon polygon = GeoTestUtil.nextPolygon();
+      //System.out.println("  poly=" + polygon);
       Rectangle box = Rectangle.fromPolygon(new Polygon[] { polygon });
       int minLat = LatLonPoint.encodeLatitude(box.minLat);
       int maxLat = LatLonPoint.encodeLatitude(box.maxLat);
@@ -85,6 +87,7 @@ public class TestLatLonGrid extends LuceneTestCase {
 
         Relation expected = polygon.relate(LatLonPoint.decodeLatitude(docMinLat), LatLonPoint.decodeLatitude(docMaxLat), 
                                            LatLonPoint.decodeLongitude(docMinLon), LatLonPoint.decodeLongitude(docMaxLon));
+        //System.out.println("  test lat=" + docMinLat + " TO " + docMaxLat + " lon=" + docMinLon + " TO " + docMaxLon);
         Relation actual = grid.relate(docMinLat, docMaxLat, docMinLon, docMaxLon);
         assertEquals(expected, actual);
       }
