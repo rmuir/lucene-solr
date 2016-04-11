@@ -169,12 +169,12 @@ final class LatLonPointInPolygonQuery extends Query {
                                return Relation.CELL_OUTSIDE_QUERY;
                              }
                              
-                             double cellMinLat = decodeLatitude(minPackedValue, 0);
-                             double cellMinLon = decodeLongitude(minPackedValue, Integer.BYTES);
-                             double cellMaxLat = decodeLatitude(maxPackedValue, 0);
-                             double cellMaxLon = decodeLongitude(maxPackedValue, Integer.BYTES);
+                             int cellMinLat = NumericUtils.sortableBytesToInt(minPackedValue, 0);
+                             int cellMinLon = NumericUtils.sortableBytesToInt(minPackedValue, Integer.BYTES);
+                             int cellMaxLat = NumericUtils.sortableBytesToInt(maxPackedValue, 0);
+                             int cellMaxLon = NumericUtils.sortableBytesToInt(maxPackedValue, Integer.BYTES);
 
-                             return Polygon.relate(polygons, cellMinLat, cellMaxLat, cellMinLon, cellMaxLon);
+                             return grid.relate(cellMinLat, cellMaxLat, cellMinLon, cellMaxLon);
                            }
                          });
 

@@ -22,8 +22,6 @@ import org.apache.lucene.util.FixedBitSet;
 
 import static org.apache.lucene.geo.GeoEncodingUtils.decodeLatitude;
 import static org.apache.lucene.geo.GeoEncodingUtils.decodeLongitude;
-import static org.apache.lucene.geo.GeoEncodingUtils.encodeLatitude;
-import static org.apache.lucene.geo.GeoEncodingUtils.encodeLongitude;
 
 /**
  * This is a temporary hack, until some polygon methods have better performance!
@@ -49,20 +47,23 @@ import static org.apache.lucene.geo.GeoEncodingUtils.encodeLongitude;
 // TODO: just make a more proper tree (maybe in-ram BKD)? then we can answer most 
 // relational operations as rectangle <-> rectangle relations in integer space in log(n) time..
 final class LatLonGrid {
+  private static final boolean DEBUG = false;
   // must be a power of two!
-  static final int GRID_SIZE = 1<<5;
-  final int minLat;
-  final int maxLat;
-  final int minLon;
-  final int maxLon;
+  private static final int GRID_SIZE = 1<<5;
+  // bounding box of polygons
+  private final int minLat;
+  private final int maxLat;
+  private final int minLon;
+  private final int maxLon;
   // TODO: something more efficient than parallel bitsets? maybe one bitset?
-  final FixedBitSet haveAnswer = new FixedBitSet(GRID_SIZE * GRID_SIZE);
-  final FixedBitSet answer = new FixedBitSet(GRID_SIZE * GRID_SIZE);
+  private final FixedBitSet haveAnswer = new FixedBitSet(2 * GRID_SIZE * GRID_SIZE);
+  private final FixedBitSet answer = new FixedBitSet(2 * GRID_SIZE * GRID_SIZE);
+  private final int LEAF_NODE_ID_START = GRID_SIZE * GRID_SIZE;
   
-  final long latPerCell;
-  final long lonPerCell;
+  private final long latPerCell; // latitude range per grid cell
+  private final long lonPerCell; // longitude range per grid cell
   
-  final Polygon[] polygons;
+  private final Polygon[] polygons;
   
   LatLonGrid(int minLat, int maxLat, int minLon, int maxLon, Polygon... polygons) {
     this.minLat = minLat;
@@ -75,7 +76,7 @@ final class LatLonGrid {
       throw new IllegalArgumentException("Grid cannot cross the dateline");
     }
     if (minLat > maxLat) {
-      throw new IllegalArgumentException("bogus grid");
+      throw new IllegalArgumentException("bogus bounding box");
     }
     long latitudeRange = maxLat - (long) minLat;
     long longitudeRange = maxLon - (long) minLon;
@@ -88,19 +89,23 @@ final class LatLonGrid {
       // but it prevents edge case bugs.
       latPerCell = latitudeRange / (GRID_SIZE - 1);
       lonPerCell = longitudeRange / (GRID_SIZE - 1);
-      fill(polygons, 0, GRID_SIZE, 0, GRID_SIZE);
+      fill(1, 0, GRID_SIZE, 0, GRID_SIZE);
     }
   }
+
+  // nocommit remove parents argument:
   
   /** fills a 2D range of grid cells [minLatIndex .. maxLatIndex) X [minLonIndex .. maxLonIndex) */
-  void fill(Polygon[] polygons, int minLatIndex, int maxLatIndex, int minLonIndex, int maxLonIndex) {
-    // grid cells at the edge of the bounding box are typically smaller than normal, because we spill over.
+  private void fill(int nodeID, int minLatIndex, int maxLatIndex, int minLonIndex, int maxLonIndex) {
+    // Math.min because grid cells at the edge of the bounding box are smaller than normal due to spilling.
+    //System.out.println("fill parents=" + parents + " lat=" + minLatIndex + "-" + maxLatIndex + " lon=" + minLonIndex + "-" + maxLonIndex);
     long cellMinLat = minLat + (minLatIndex * latPerCell);
     long cellMaxLat = Math.min(maxLat, minLat + (maxLatIndex * latPerCell) - 1);
     long cellMinLon = minLon + (minLonIndex * lonPerCell);
     long cellMaxLon = Math.min(maxLon, minLon + (maxLonIndex * lonPerCell) - 1);
 
-    assert cellMinLat <= maxLat && cellMinLon <= maxLon;
+    assert cellMinLat <= maxLat;
+    assert cellMinLon <= maxLon;
     assert cellMaxLat >= cellMinLat;
     assert cellMaxLon >= cellMinLon;
 
@@ -109,10 +114,20 @@ final class LatLonGrid {
                                                  decodeLongitude((int) cellMinLon),
                                                  decodeLongitude((int) cellMaxLon));
     if (relation != Relation.CELL_CROSSES_QUERY) {
+
+      //System.out.println(relation + " for nodeID=" + nodeID + " lat=" + minLatIndex + "-" + maxLatIndex + " lon=" + minLonIndex + "-" + maxLonIndex);
+      // all cells under here are either fully contained by or fully outside of the poly, so we "fill" our cells and stop recursing
+      if (nodeID < LEAF_NODE_ID_START) {
+        haveAnswer.set(nodeID);
+        if (relation == Relation.CELL_INSIDE_QUERY) {
+          answer.set(nodeID);
+        }
+      }
       // we know the answer for this region, fill the cell range
       for (int i = minLatIndex; i < maxLatIndex; i++) {
         for (int j = minLonIndex; j < maxLonIndex; j++) {
-          int index = i * GRID_SIZE + j;
+          int index = LEAF_NODE_ID_START + i * GRID_SIZE + j;
+          //System.out.println("  set " + index);
           assert haveAnswer.get(index) == false;
           haveAnswer.set(index);
           if (relation == Relation.CELL_INSIDE_QUERY) {
@@ -120,6 +135,7 @@ final class LatLonGrid {
           }
         }
       }
+
     } else if (minLatIndex == maxLatIndex - 1) {
       // nothing more to do: this is a single grid cell (leaf node) and
       // is an edge case for the polygon.
@@ -127,10 +143,142 @@ final class LatLonGrid {
       // grid range crosses our polygon, keep recursing.
       int midLatIndex = (minLatIndex + maxLatIndex) >>> 1;
       int midLonIndex = (minLonIndex + maxLonIndex) >>> 1;
-      fill(polygons, minLatIndex, midLatIndex, minLonIndex, midLonIndex);
-      fill(polygons, minLatIndex, midLatIndex, midLonIndex, maxLonIndex);
-      fill(polygons, midLatIndex, maxLatIndex, minLonIndex, midLonIndex);
-      fill(polygons, midLatIndex, maxLatIndex, midLonIndex, maxLonIndex);
+      fill(4*nodeID, minLatIndex, midLatIndex, minLonIndex, midLonIndex);
+      fill(4*nodeID+1, minLatIndex, midLatIndex, midLonIndex, maxLonIndex);
+      fill(4*nodeID+2, midLatIndex, maxLatIndex, minLonIndex, midLonIndex);
+      fill(4*nodeID+3, midLatIndex, maxLatIndex, midLonIndex, maxLonIndex);
+    }
+  }
+
+  // NOTE: returns null if the tree couldn't answer the relation, and then caller must ask the Polygon
+  private Relation relate(int nodeID,
+                          int queryMinLatIndex, int queryMaxLatIndex, int queryMinLonIndex, int queryMaxLonIndex,
+                          int cellMinLatIndex, int cellMaxLatIndex, int cellMinLonIndex, int cellMaxLonIndex) {
+
+    if (DEBUG) System.out.println("    relate recurse nodeID=" + nodeID + " cellLat=" + cellMinLatIndex + "-" + cellMaxLatIndex + " cellLon=" + cellMinLonIndex + "-" + cellMaxLonIndex);
+    if (nodeID >= LEAF_NODE_ID_START) {
+      // tree doesn't know the answer, and we are down at a leaf, so we must do a full check
+      assert cellMinLatIndex == cellMaxLatIndex-1;
+      assert cellMinLonIndex == cellMaxLonIndex-1;
+
+      // nocommit fix leaf node addressing to be consistent w/ inner?
+      int index = LEAF_NODE_ID_START + cellMinLatIndex * GRID_SIZE + cellMinLonIndex;
+      if (haveAnswer.get(index)) {
+        if (answer.get(index)) {
+          if (DEBUG) System.out.println("      leaf return INSIDE");
+          return Relation.CELL_INSIDE_QUERY;
+        } else {
+          if (DEBUG) System.out.println("      leaf return OUTSIDE");
+          return Relation.CELL_OUTSIDE_QUERY;
+        }
+      } else {
+        if (DEBUG) System.out.println("      leaf return null");
+        return null;
+      }
+
+    } else {
+      if (haveAnswer.get(nodeID)) {
+        // we can stop recursing because this node knows if we are inside or outside, and even if
+        // the query box is a subset of this area, it doesn't change the answer
+        if (answer.get(nodeID)) {
+          if (DEBUG) System.out.println("      node have answer: INSIDE");
+          return Relation.CELL_INSIDE_QUERY;
+        } else {
+          if (DEBUG) System.out.println("      node have answer: OUTSIDE");
+          return Relation.CELL_OUTSIDE_QUERY;
+        }
+      } else {
+
+        int cellMidLatIndex = (cellMinLatIndex + cellMaxLatIndex) >>> 1;
+        int cellMidLonIndex = (cellMinLonIndex + cellMaxLonIndex) >>> 1;
+
+        // nocommit make sure tests hit all these ifs!!!
+        boolean sawOutside = false;
+        boolean sawInside = false;
+        boolean sawUnknown = false;
+        if (queryMinLatIndex < cellMidLatIndex && queryMinLonIndex < cellMidLonIndex) {
+          Relation r = relate(4*nodeID,
+                              queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
+                              cellMinLatIndex, cellMidLatIndex, cellMinLonIndex, cellMidLonIndex);
+          if (r == Relation.CELL_CROSSES_QUERY) {
+            return Relation.CELL_CROSSES_QUERY;
+          } else if (r == Relation.CELL_INSIDE_QUERY) {
+            sawInside = true;
+          } else if (r == Relation.CELL_OUTSIDE_QUERY) {
+            sawOutside = true;
+          } else {
+            sawUnknown = true;
+          }
+        }
+
+        if (queryMinLatIndex < cellMidLatIndex && queryMaxLonIndex >= cellMidLonIndex) {
+          Relation r = relate(4*nodeID+1,
+                              queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
+                              cellMinLatIndex, cellMidLatIndex, cellMidLonIndex, cellMaxLonIndex);
+          if (r == Relation.CELL_CROSSES_QUERY) {
+            return Relation.CELL_CROSSES_QUERY;
+          } else if (r == Relation.CELL_INSIDE_QUERY) {
+            sawInside = true;
+          } else if (r == Relation.CELL_OUTSIDE_QUERY) {
+            sawOutside = true;
+          } else {
+            sawUnknown = true;
+          }
+        }
+
+        if (sawInside && sawOutside) {
+          return Relation.CELL_CROSSES_QUERY;
+        }
+
+        if (queryMaxLatIndex >= cellMidLatIndex && queryMinLonIndex < cellMidLonIndex) {
+          Relation r = relate(4*nodeID+2,
+                              queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
+                              cellMidLatIndex, cellMaxLatIndex, cellMinLonIndex, cellMidLonIndex);
+          if (r == Relation.CELL_CROSSES_QUERY) {
+            return Relation.CELL_CROSSES_QUERY;
+          } else if (r == Relation.CELL_INSIDE_QUERY) {
+            sawInside = true;
+          } else if (r == Relation.CELL_OUTSIDE_QUERY) {
+            sawOutside = true;
+          } else {
+            sawUnknown = true;
+          }
+        }
+
+        if (sawInside && sawOutside) {
+          return Relation.CELL_CROSSES_QUERY;
+        }
+
+        // nocommit this should be smarter ... we need to differentiate between "don't know" (use the slow API), and "for sure crossess"...
+        if (queryMaxLatIndex >= cellMidLatIndex && queryMaxLonIndex >= cellMidLonIndex) {
+          Relation r = relate(4*nodeID+3,
+                              queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
+                              cellMidLatIndex, cellMaxLatIndex, cellMidLonIndex, cellMaxLonIndex);
+          if (r == Relation.CELL_CROSSES_QUERY) {
+            return Relation.CELL_CROSSES_QUERY;
+          } else if (r == Relation.CELL_INSIDE_QUERY) {
+            sawInside = true;
+          } else if (r == Relation.CELL_OUTSIDE_QUERY) {
+            sawOutside = true;
+          } else {
+            sawUnknown = true;
+          }
+        }
+
+        if (sawInside && sawOutside) {
+          return Relation.CELL_CROSSES_QUERY;
+        } else if (sawUnknown) {
+          return null;
+        } else if (sawInside) {
+          return Relation.CELL_INSIDE_QUERY;
+        } else if (sawOutside) {
+          return Relation.CELL_OUTSIDE_QUERY;
+        } else {
+          // wtf
+          assert false;
+          return null;
+        }
+      }
     }
   }
   
@@ -150,17 +298,74 @@ final class LatLonGrid {
     return Polygon.contains(polygons, docLatitude, docLongitude);
   }
   
+  /** Returns relation to the provided rectangle */
+  Relation relate(int minLat, int maxLat, int minLon, int maxLon) {
+    // if the bounding boxes are disjoint then the shape does not cross
+    if (maxLon < this.minLon || minLon > this.maxLon || maxLat < this.minLat || minLat > this.maxLat) {
+      return Relation.CELL_OUTSIDE_QUERY;
+    }
+    // if the rectangle fully encloses us, we cross.
+    if (minLat <= this.minLat && maxLat >= this.maxLat && minLon <= this.minLon && maxLon >= this.maxLon) {
+      return Relation.CELL_CROSSES_QUERY;
+    }
+
+    if (minLat >= this.minLat && maxLat <= this.maxLat && minLon >= this.minLon && maxLon <= this.maxLon) {
+      if (DEBUG) System.out.println("  relate: within query lat=" + latCell(minLat) + "-" + latCell(maxLat) + " lon=" + lonCell(minLon) + "-" + lonCell(maxLon));
+      // query box is fully within our box, so the tree is authoritative if it has an answer:
+      Relation r = relate(1,
+                          latCell(minLat),
+                          latCell(maxLat),
+                          lonCell(minLon),
+                          lonCell(maxLon),
+                          0, GRID_SIZE, 0, GRID_SIZE);
+      if (r != null) {
+        // nocommit make sure tests hit this
+        //System.out.println("tree1 says " + r);
+        return r;
+      }
+    } else {
+      if (DEBUG) System.out.println("  relate: crosses query lat=" + latCell(Math.max(minLat, this.minLat)) + "-" + latCell(Math.min(maxLat, this.maxLat)) + " lon=" + lonCell(Math.max(minLon, this.minLon)) + "-" + lonCell(Math.min(maxLon, this.maxLon)));
+      // query box crosses our bounding box, so we can only short circuit if the tree says OUTSIDE for the overlap:
+      Relation r = relate(1,
+                          latCell(Math.max(minLat, this.minLat)),
+                          latCell(Math.min(maxLat, this.maxLat)),
+                          lonCell(Math.max(minLon, this.minLon)),
+                          lonCell(Math.min(maxLon, this.maxLon)),
+                          0, GRID_SIZE, 0, GRID_SIZE);
+      if (r != null) {
+        // nocommit make sure tests hit this
+        //System.out.println("tree2 says " + r);
+        return r;
+      }
+    }
+    
+    //return Relation.CELL_CROSSES_QUERY;
+    // do it the hard way!
+    return Polygon.relate(polygons, decodeLatitude(minLat), 
+                                    decodeLatitude(maxLat), 
+                                    decodeLongitude(minLon), 
+                                    decodeLongitude(maxLon));
+  }
+  
+  private int latCell(int latitude) {
+    assert latitude >= minLat;
+    assert latitude <= maxLat;
+    long latRel = latitude - (long) minLat;
+    return (int) (latRel / latPerCell);
+  }
+
+  private int lonCell(int longitude) {
+    assert longitude >= minLon;
+    assert longitude <= maxLon;
+    long lonRel = longitude - (long) minLon;
+    return (int) (lonRel / lonPerCell);
+  }
+
   /** Returns grid index of lat/lon, or -1 if the value is outside of the bounding box. */
   private int index(int latitude, int longitude) {
     if (latitude < minLat || latitude > maxLat || longitude < minLon || longitude > maxLon) {
       return -1; // outside of bounding box range
     }
-    
-    long latRel = latitude - (long) minLat;
-    long lonRel = longitude - (long) minLon;
-    
-    int latIndex = (int) (latRel / latPerCell);
-    int lonIndex = (int) (lonRel / lonPerCell);
-    return latIndex * GRID_SIZE + lonIndex;
+    return LEAF_NODE_ID_START + latCell(latitude) * GRID_SIZE + lonCell(longitude);
   }
 }
