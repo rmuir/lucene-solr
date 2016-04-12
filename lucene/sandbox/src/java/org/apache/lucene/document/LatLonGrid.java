@@ -24,6 +24,11 @@ import org.apache.lucene.geo.Polygon;
 import org.apache.lucene.index.PointValues.Relation;
 import org.apache.lucene.util.FixedBitSet;
 
+import static org.apache.lucene.geo.GeoEncodingUtils.decodeLatitude;
+import static org.apache.lucene.geo.GeoEncodingUtils.decodeLongitude;
+import static org.apache.lucene.geo.GeoEncodingUtils.encodeLatitude;
+import static org.apache.lucene.geo.GeoEncodingUtils.encodeLongitude;
+
 /**
  * This is a temporary hack, until some polygon methods have better performance!
  * <p>
@@ -83,13 +88,17 @@ final class LatLonGrid {
     }
     long latitudeRange = maxLat - (long) minLat;
     long longitudeRange = maxLon - (long) minLon;
-    // we spill over the edge of the bounding box in each direction a bit,
-    // but it prevents edge case bugs.
-    latPerCell = latitudeRange / (GRID_SIZE - 1);
-    lonPerCell = longitudeRange / (GRID_SIZE - 1);
-    //earth = new EarthDebugger((LatLonPoint.decodeLatitude(minLat) + LatLonPoint.decodeLatitude(maxLat))/2.0, (LatLonPoint.decodeLongitude(minLon) + LatLonPoint.decodeLongitude(maxLon))/2.0, 400000);
-    fill(1, 0, GRID_SIZE, 0, GRID_SIZE);
-    //earth.addPolygon(polygons[0]);
+
+    if (latitudeRange < GRID_SIZE || longitudeRange < GRID_SIZE) {
+      // don't complicate fill right now if you pass e.g. emptyish stuff: make an "empty grid"
+      latPerCell = lonPerCell = Long.MAX_VALUE;
+    } else {
+      // we spill over the edge of the bounding box in each direction a bit,
+      // but it prevents edge case bugs.
+      latPerCell = latitudeRange / (GRID_SIZE - 1);
+      lonPerCell = longitudeRange / (GRID_SIZE - 1);
+      fill(1, 0, GRID_SIZE, 0, GRID_SIZE);
+    }
   }
 
   /** fills a 2D range of grid cells [minLatIndex .. maxLatIndex) X [minLonIndex .. maxLonIndex) */
@@ -106,10 +115,10 @@ final class LatLonGrid {
     assert cellMaxLat >= cellMinLat;
     assert cellMaxLon >= cellMinLon;
 
-    Relation relation = Polygon.relate(polygons, LatLonPoint.decodeLatitude((int) cellMinLat), 
-                                                 LatLonPoint.decodeLatitude((int) cellMaxLat), 
-                                                 LatLonPoint.decodeLongitude((int) cellMinLon), 
-                                                 LatLonPoint.decodeLongitude((int) cellMaxLon));
+    Relation relation = Polygon.relate(polygons, decodeLatitude((int) cellMinLat),
+                                                 decodeLatitude((int) cellMaxLat),
+                                                 decodeLongitude((int) cellMinLon),
+                                                 decodeLongitude((int) cellMaxLon));
     if (relation != Relation.CELL_CROSSES_QUERY) {
 
       //System.out.println(relation + " for nodeID=" + nodeID + " lat=" + minLatIndex + "-" + maxLatIndex + " lon=" + minLonIndex + "-" + maxLonIndex);
@@ -306,8 +315,8 @@ final class LatLonGrid {
     }
 
     // the grid is unsure (boundary): do a real test.
-    double docLatitude = LatLonPoint.decodeLatitude(latitude);
-    double docLongitude = LatLonPoint.decodeLongitude(longitude);
+    double docLatitude = decodeLatitude(latitude);
+    double docLongitude = decodeLongitude(longitude);
     return Polygon.contains(polygons, docLatitude, docLongitude);
   }
 
@@ -409,10 +418,10 @@ final class LatLonGrid {
 
     // do it the hard way!
 
-    Relation r = Polygon.relate(polygons, LatLonPoint.decodeLatitude(minLat), 
-                                LatLonPoint.decodeLatitude(maxLat), 
-                                LatLonPoint.decodeLongitude(minLon), 
-                                LatLonPoint.decodeLongitude(maxLon));
+    Relation r = Polygon.relate(polygons, decodeLatitude(minLat), 
+                                          decodeLatitude(maxLat), 
+                                          decodeLongitude(minLon), 
+                                          decodeLongitude(maxLon));
 
     /*
     if (r != Relation.CELL_CROSSES_QUERY) {

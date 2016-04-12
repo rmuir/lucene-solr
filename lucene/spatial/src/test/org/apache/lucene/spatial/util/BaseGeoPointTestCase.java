@@ -38,7 +38,6 @@ import org.apache.lucene.document.NumericDocValuesField;
 import org.apache.lucene.document.StoredField;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.geo.Rectangle;
-import org.apache.lucene.geo.GeoTestUtil;
 import org.apache.lucene.geo.GeoUtils;
 import org.apache.lucene.geo.Polygon;
 import org.apache.lucene.index.DirectoryReader;
@@ -68,7 +67,6 @@ import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.SloppyMath;
 import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.bkd.BKDWriter;
-import org.junit.BeforeClass;
 
 /**
  * Abstract class to do basic tests for a geospatial impl (high level
@@ -85,13 +83,48 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
 
   protected static final String FIELD_NAME = "point";
 
-  private static double originLat;
-  private static double originLon;
+  private double originLat;
+  private double originLon;
 
-  @BeforeClass
-  public static void beforeClassBase() throws Exception {
-    originLon = GeoTestUtil.nextLongitude();
-    originLat = GeoTestUtil.nextLatitude();
+  @Override
+  public void setUp() throws Exception {
+    super.setUp();
+    originLon = nextLongitude();
+    originLat = nextLatitude();
+  }
+  
+  // TODO: remove these hooks once all subclasses can pass with new random!
+
+  protected double nextLongitude() {
+    return org.apache.lucene.geo.GeoTestUtil.nextLongitude();
+  }
+  
+  protected double nextLongitudeNear(double other) {
+    return org.apache.lucene.geo.GeoTestUtil.nextLongitudeNear(other);
+  }
+  
+  protected double nextLatitude() {
+    return org.apache.lucene.geo.GeoTestUtil.nextLatitude();
+  }
+  
+  protected double nextLatitudeNear(double other) {
+    return org.apache.lucene.geo.GeoTestUtil.nextLatitudeNear(other);
+  }
+  
+  protected Rectangle nextBox() {
+    return org.apache.lucene.geo.GeoTestUtil.nextBox();
+  }
+  
+  protected Rectangle nextBoxNear(double latitude, double longitude) {
+    return org.apache.lucene.geo.GeoTestUtil.nextBoxNear(latitude, longitude);
+  }
+  
+  protected Polygon nextPolygon() {
+    return org.apache.lucene.geo.GeoTestUtil.nextPolygon();
+  }
+  
+  protected Polygon nextPolygonNear(double latitude, double longitude) {
+    return org.apache.lucene.geo.GeoTestUtil.nextPolygonNear(latitude, longitude);
   }
   
   /** Valid values that should not cause exception */
@@ -691,19 +724,19 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
     verify(small, lats, lons);
   }
 
-  public double randomLat(boolean small) {
+  public final double randomLat(boolean small) {
     if (small) {
-      return GeoTestUtil.nextLatitudeNear(originLat);
+      return nextLatitudeNear(originLat);
     } else {
-      return GeoTestUtil.nextLatitude();
+      return nextLatitude();
     }
   }
 
-  public double randomLon(boolean small) {
+  public final double randomLon(boolean small) {
     if (small) {
-      return GeoTestUtil.nextLongitudeNear(originLon);
+      return nextLongitudeNear(originLon);
     } else {
-      return GeoTestUtil.nextLongitude();
+      return nextLongitude();
     }
   }
 
@@ -719,11 +752,11 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
     return lon;
   }
 
-  protected Rectangle randomRect(boolean small) {
+  protected final Rectangle randomRect(boolean small) {
     if (small) {
-      return GeoTestUtil.nextBoxNear(originLat, originLon);
+      return nextBoxNear(originLat, originLon);
     } else {
-      return GeoTestUtil.nextBox();
+      return nextBox();
     }
   }
 
@@ -738,7 +771,7 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
   static final boolean rectContainsPoint(Rectangle rect, double pointLat, double pointLon) {
     assert Double.isNaN(pointLat) == false;
 
-    if (rect.minLon < rect.maxLon) {
+    if (rect.minLon <= rect.maxLon) {
       return GeoRelationUtils.pointInRectPrecise(pointLat, pointLon, rect.minLat, rect.maxLat, rect.minLon, rect.maxLon);
     } else {
       // Rect crosses dateline:
@@ -1102,9 +1135,9 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
       // Polygon
       final Polygon polygon;
       if (small) {
-        polygon = GeoTestUtil.nextPolygonNear(originLat, originLon);
+        polygon = nextPolygonNear(originLat, originLon);
       } else {
-        polygon = GeoTestUtil.nextPolygon();
+        polygon = nextPolygon();
       }
       
       Query query = newPolygonQuery(FIELD_NAME, polygon);
@@ -1223,26 +1256,29 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
     // exact edge cases
     assertEquals(8, s.count(newRectQuery(FIELD_NAME, rect.minLat, rect.maxLat, rect.minLon, rect.maxLon)));
     
-    // expand 1 ulp in each direction
-    assumeFalse("can't expand box, its too big already", rect.minLat ==  -90);
-    assumeFalse("can't expand box, its too big already", rect.maxLat ==   90);
-    assumeFalse("can't expand box, its too big already", rect.minLon == -180);
-    assumeFalse("can't expand box, its too big already", rect.maxLon ==  180);
-    assertEquals(8, s.count(newRectQuery(FIELD_NAME, Math.nextDown(rect.minLat), rect.maxLat, rect.minLon, rect.maxLon)));
-    assertEquals(8, s.count(newRectQuery(FIELD_NAME, rect.minLat, Math.nextUp(rect.maxLat), rect.minLon, rect.maxLon)));
-    assertEquals(8, s.count(newRectQuery(FIELD_NAME, rect.minLat, rect.maxLat, Math.nextDown(rect.minLon), rect.maxLon)));
-    assertEquals(8, s.count(newRectQuery(FIELD_NAME, rect.minLat, rect.maxLat, rect.minLon, Math.nextUp(rect.maxLon))));
+    // expand 1 ulp in each direction if possible and test a slightly larger box!
+    if (rect.minLat != -90) {
+      assertEquals(8, s.count(newRectQuery(FIELD_NAME, Math.nextDown(rect.minLat), rect.maxLat, rect.minLon, rect.maxLon)));
+    }
+    if (rect.maxLat != 90) {
+      assertEquals(8, s.count(newRectQuery(FIELD_NAME, rect.minLat, Math.nextUp(rect.maxLat), rect.minLon, rect.maxLon)));
+    }
+    if (rect.minLon != -180) {
+      assertEquals(8, s.count(newRectQuery(FIELD_NAME, rect.minLat, rect.maxLat, Math.nextDown(rect.minLon), rect.maxLon)));
+    }
+    if (rect.maxLon != 180) {
+      assertEquals(8, s.count(newRectQuery(FIELD_NAME, rect.minLat, rect.maxLat, rect.minLon, Math.nextUp(rect.maxLon))));
+    }
     
-    // now shrink 1 ulp in each direction: it should not include bogus stuff
-    assumeFalse("can't shrink box, its too small already", rect.minLat ==   90);
-    assumeFalse("can't shrink box, its too small already", rect.maxLat ==  -90);
-    assumeFalse("can't shrink box, its too small already", rect.minLon ==  180);
-    assumeFalse("can't shrink box, its too small already", rect.maxLon == -180);
-    // note we put points on "sides" not just "corners" so we just shrink all 4 at once for now: it should exclude all points!
-    assertEquals(0, s.count(newRectQuery(FIELD_NAME, Math.nextUp(rect.minLat), 
+    // now shrink 1 ulp in each direction if possible: it should not include bogus stuff
+    if (rect.minLat != 90 && rect.maxLat != -90 && rect.minLon != 80 && rect.maxLon != -180) {
+      // note we put points on "sides" not just "corners" so we just shrink all 4 at once for now: it should exclude all points!
+      assertEquals(0, s.count(newRectQuery(FIELD_NAME, Math.nextUp(rect.minLat), 
                                                      Math.nextDown(rect.maxLat), 
                                                      Math.nextUp(rect.minLon), 
                                                      Math.nextDown(rect.maxLon))));
+    }
+
     r.close();
     w.close();
     dir.close();
@@ -1288,8 +1324,8 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
     RandomIndexWriter writer = new RandomIndexWriter(random(), dir, iwc);
   
     for (int i = 0; i < numDocs; i++) {
-      double latRaw = GeoTestUtil.nextLatitude();
-      double lonRaw = GeoTestUtil.nextLongitude();
+      double latRaw = nextLatitude();
+      double lonRaw = nextLongitude();
       // pre-normalize up front, so we can just use quantized value for testing and do simple exact comparisons
       double lat = quantizeLat(latRaw);
       double lon = quantizeLon(lonRaw);
@@ -1303,8 +1339,8 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
     IndexSearcher searcher = newSearcher(reader);
   
     for (int i = 0; i < numQueries; i++) {
-      double lat = GeoTestUtil.nextLatitude();
-      double lon = GeoTestUtil.nextLongitude();
+      double lat = nextLatitude();
+      double lon = nextLongitude();
       double radius = 50000000D * random().nextDouble();
   
       BitSet expected = new BitSet();

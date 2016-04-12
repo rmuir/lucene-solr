@@ -18,6 +18,10 @@ New Features
 
 API Changes
 
+* LUCENE-7184: Refactor LatLonPoint encoding methods to new GeoEncodingUtils
+  helper class in core geo package. Also refactors LatLonPointTests to
+  TestGeoEncodingUtils (Nick Knize)
+
 * LUCENE-7163: refactor GeoRect, Polygon, and GeoUtils tests to geo
   package in core (Nick Knize)
 
@@ -65,6 +69,16 @@ Bug Fixes
 
 * LUCENE-7166: Fix corner case bugs in LatLonPoint/GeoPointField bounding box
   queries. (Robert Muir)
+
+* LUCENE-7168: Switch to stable encode for geo3d, remove quantization
+  test leniency, remove dead code (Mike McCandless)
+
+* LUCENE-7187: Block join queries' Weight#extractTerms(...) implementations
+  should delegate to the wrapped weight. (Martijn van Groningen)
+
+Other
+
+* LUCENE-7174: Upgrade randomizedtesting to 2.3.4. (Uwe Schindler, Dawid Weiss)
 
 ======================= Lucene 6.0.0 =======================
 

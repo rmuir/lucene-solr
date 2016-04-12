@@ -44,8 +44,6 @@ class GeoConvexPolygon extends GeoBasePolygon {
   protected GeoPoint[][] notableEdgePoints = null;
   /** A point which is on the boundary of the polygon */
   protected GeoPoint[] edgePoints = null;
-  /** Tracking the maximum distance we go at any one time, so to be sure it's legal */
-  protected double fullDistance = 0.0;
   /** Set to true when the polygon is complete */
   protected boolean isDone = false;
   /** A bounds object for each sided plane */
@@ -185,10 +183,21 @@ class GeoConvexPolygon extends GeoBasePolygon {
     for (int i = 0; i < points.size(); i++) {
       final GeoPoint start = points.get(i);
       final GeoPoint end = points.get(legalIndex(i + 1));
-      final double distance = start.arcDistance(end);
-      if (distance > fullDistance)
-        fullDistance = distance;
-      final GeoPoint check = points.get(legalIndex(i + 2));
+      // We have to find the next point that is not on the plane between start and end.
+      // If there is no such point, it's an error.
+      final Plane planeToFind = new Plane(start, end);
+      int endPointIndex = -1;
+      for (int j = 0; j < points.size(); j++) {
+        final int index = legalIndex(j + i + 2);
+        if (!planeToFind.evaluateIsZero(points.get(index))) {
+          endPointIndex = index;
+          break;
+        }
+      }
+      if (endPointIndex == -1) {
+        throw new IllegalArgumentException("Polygon points are all coplanar");
+      }
+      final GeoPoint check = points.get(endPointIndex);
       final SidedPlane sp = new SidedPlane(check, start, end);
       //System.out.println("Created edge "+sp+" using start="+start+" end="+end+" check="+check);
       edges[i] = sp;
@@ -256,6 +265,7 @@ class GeoConvexPolygon extends GeoBasePolygon {
       final SidedPlane edge = edges[edgeIndex];
       final GeoPoint[] points = this.notableEdgePoints[edgeIndex];
       if (!isInternalEdges.get(edgeIndex)) {
+        //System.err.println("Checking convex edge "+edge+" for intersection against plane "+p);
         if (edge.intersects(planetModel, p, notablePoints, points, bounds, eitherBounds.get(edge))) {
           //System.err.println(" intersects!");
           return true;
@@ -281,6 +291,7 @@ class GeoConvexPolygon extends GeoBasePolygon {
     protected final SidedPlane exception;
     
     /** Constructor.
+      * @param exception is the one plane to exclude from the check.
       */
     public EitherBound(final SidedPlane exception) {
       this.exception = exception;

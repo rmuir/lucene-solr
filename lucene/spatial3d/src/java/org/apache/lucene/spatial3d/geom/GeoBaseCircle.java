@@ -19,7 +19,7 @@ package org.apache.lucene.spatial3d.geom;
 /**
  * GeoCircles have all the characteristics of GeoBaseDistanceShapes, plus GeoSizeable.
  *
- * @lucene.experimental
+ * @lucene.internal
  */
 abstract class GeoBaseCircle extends GeoBaseDistanceShape implements GeoCircle {
 

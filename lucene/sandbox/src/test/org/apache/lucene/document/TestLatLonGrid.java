@@ -23,6 +23,11 @@ import org.apache.lucene.index.PointValues.Relation;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.TestUtil;
 
+import static org.apache.lucene.geo.GeoEncodingUtils.decodeLatitude;
+import static org.apache.lucene.geo.GeoEncodingUtils.decodeLongitude;
+import static org.apache.lucene.geo.GeoEncodingUtils.encodeLatitude;
+import static org.apache.lucene.geo.GeoEncodingUtils.encodeLongitude;
+
 /** tests against LatLonGrid (avoiding indexing/queries) */
 public class TestLatLonGrid extends LuceneTestCase {
 
@@ -31,10 +36,10 @@ public class TestLatLonGrid extends LuceneTestCase {
     for (int i = 0; i < 100; i++) {
       Polygon polygon = GeoTestUtil.nextPolygon();
       Rectangle box = Rectangle.fromPolygon(new Polygon[] { polygon });
-      int minLat = LatLonPoint.encodeLatitude(box.minLat);
-      int maxLat = LatLonPoint.encodeLatitude(box.maxLat);
-      int minLon = LatLonPoint.encodeLongitude(box.minLon);
-      int maxLon = LatLonPoint.encodeLongitude(box.maxLon);
+      int minLat = encodeLatitude(box.minLat);
+      int maxLat = encodeLatitude(box.maxLat);
+      int minLon = encodeLongitude(box.minLon);
+      int maxLon = encodeLongitude(box.maxLon);
       LatLonGrid grid = new LatLonGrid(minLat, maxLat, minLon, maxLon, polygon);
       // we are in integer space... but exhaustive testing is slow!
       // these checks are all inside the bounding box of the polygon!
@@ -42,8 +47,8 @@ public class TestLatLonGrid extends LuceneTestCase {
         int lat = TestUtil.nextInt(random(), minLat, maxLat);
         int lon = TestUtil.nextInt(random(), minLon, maxLon);
 
-        boolean expected = polygon.contains(LatLonPoint.decodeLatitude(lat), 
-                                            LatLonPoint.decodeLongitude(lon));
+        boolean expected = polygon.contains(decodeLatitude(lat),
+                                            decodeLongitude(lon));
         boolean actual = grid.contains(lat, lon);
         assertEquals(expected, actual);
       }
@@ -52,8 +57,8 @@ public class TestLatLonGrid extends LuceneTestCase {
         int lat = random().nextInt();
         int lon = random().nextInt();
 
-        boolean expected = polygon.contains(LatLonPoint.decodeLatitude(lat), 
-                                            LatLonPoint.decodeLongitude(lon));
+        boolean expected = polygon.contains(decodeLatitude(lat), 
+                                            decodeLongitude(lon));
         boolean actual = grid.contains(lat, lon);
         assertEquals(expected, actual);
       }
@@ -67,10 +72,10 @@ public class TestLatLonGrid extends LuceneTestCase {
       Polygon polygon = GeoTestUtil.nextPolygon();
       //System.out.println("  poly=" + polygon);
       Rectangle box = Rectangle.fromPolygon(new Polygon[] { polygon });
-      int minLat = LatLonPoint.encodeLatitude(box.minLat);
-      int maxLat = LatLonPoint.encodeLatitude(box.maxLat);
-      int minLon = LatLonPoint.encodeLongitude(box.minLon);
-      int maxLon = LatLonPoint.encodeLongitude(box.maxLon);
+      int minLat = encodeLatitude(box.minLat);
+      int maxLat = encodeLatitude(box.maxLat);
+      int minLon = encodeLongitude(box.minLon);
+      int maxLon = encodeLongitude(box.maxLon);
       LatLonGrid grid = new LatLonGrid(minLat, maxLat, minLon, maxLon, polygon);
       // we are in integer space... but exhaustive testing is slow!
       // these boxes are all inside the bounding box of the polygon!
@@ -85,8 +90,8 @@ public class TestLatLonGrid extends LuceneTestCase {
         int docMinLon = Math.min(lon1, lon2);
         int docMaxLon = Math.max(lon1, lon2);
 
-        Relation expected = polygon.relate(LatLonPoint.decodeLatitude(docMinLat), LatLonPoint.decodeLatitude(docMaxLat), 
-                                           LatLonPoint.decodeLongitude(docMinLon), LatLonPoint.decodeLongitude(docMaxLon));
+        Relation expected = polygon.relate(decodeLatitude(docMinLat), decodeLatitude(docMaxLat), 
+                                           decodeLongitude(docMinLon), decodeLongitude(docMaxLon));
         //System.out.println("  test lat=" + docMinLat + " TO " + docMaxLat + " lon=" + docMinLon + " TO " + docMaxLon);
         Relation actual = grid.relate(docMinLat, docMaxLat, docMinLon, docMaxLon);
         assertEquals(expected, actual);
@@ -103,8 +108,8 @@ public class TestLatLonGrid extends LuceneTestCase {
         int docMinLon = Math.min(lon1, lon2);
         int docMaxLon = Math.max(lon1, lon2);
 
-        Relation expected = polygon.relate(LatLonPoint.decodeLatitude(docMinLat), LatLonPoint.decodeLatitude(docMaxLat), 
-                                           LatLonPoint.decodeLongitude(docMinLon), LatLonPoint.decodeLongitude(docMaxLon));
+        Relation expected = polygon.relate(decodeLatitude(docMinLat), decodeLatitude(docMaxLat), 
+                                           decodeLongitude(docMinLon), decodeLongitude(docMaxLon));
         Relation actual = grid.relate(docMinLat, docMaxLat, docMinLon, docMaxLon);
         assertEquals(expected, actual);
       }

@@ -89,6 +89,7 @@ New Features
   graph traversal to find the shortest path(s) in an unweighted, directed graph stored in a 
   SolrCloud collection. (Joel Bernstein)
 
+* SOLR-8938: Add optional -excluderegex argument to ZkCLI. (Christine Poerschke)
 
 Bug Fixes
 ----------------------
@@ -101,6 +102,12 @@ Bug Fixes
 * SOLR-8902: Make sure ReturnFields only returns the requested fields from (fl=) evn when 
   DocumentTransformers ask for getExtraRequestFields()  (ryan)
 
+* SOLR-8875: SolrCloud Overseer clusterState could unexpectedly be null resulting in NPE.
+  (Scott Blum via David Smiley)
+
+* SOLR-8948: OverseerTaskQueue.containsTaskWithRequestId encounters json parse error if a
+  SolrResponse node is in the overseer queue. (Jessica Cheng Mallet via shalin)
+
 Optimizations
 ----------------------
 * SOLR-8722: Don't force a full ZkStateReader refresh on every Overseer operation.
@@ -110,6 +117,11 @@ Optimizations
   forceUpdateCollection(collection) (Scott Blum via shalin)
   
 * SOLR-8856: Do not cache merge or 'read once' contexts in the hdfs block cache. (Mark Miller, Mike Drob)
+
+* SOLR-8922: Optimize filter creation (DocSetCollector) to minimize the amount of garbage
+  produced. This resulted in up to 3x throughput when small filter creation was the bottleneck,
+  as well as orders of magnitude less garbage. (Jeff Wartes, yonik)
+
 
 Other Changes
 ----------------------
@@ -129,6 +141,15 @@ Other Changes
   generate a doc list for grouped results. (Steven Bower, Keith Laban, Dennis Gove)
 
 * SOLR-8869: Optionally disable printing field cache entries in SolrFieldCacheMBean (Gregory Chanan)
+
+* SOLR-8892: Allow SolrInfoMBeans to return different statistics for /jmx vs web ui calls.
+  (Gregory Chanan, Mark Miller)
+
+* SOLR-8097: Implement builder pattern design for constructing SolrJ clients and also deprecate direct construction
+  of client objects. (Jason Gerlowski, Shawn Heisey, Anshum Gupta)
+
+* SOLR-8967: In SolrCloud mode, under the 'Core Selector' dropdown in the UI the Replication tab won't be displayed
+  anymore. The Replication tab is only beneficial to users running Solr in master-slave mode. (Varun Thacker)
 
 ==================  6.0.0 ==================
 

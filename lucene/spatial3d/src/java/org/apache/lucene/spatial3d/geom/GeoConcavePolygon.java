@@ -46,8 +46,6 @@ class GeoConcavePolygon extends GeoBasePolygon {
   protected GeoPoint[][] notableEdgePoints = null;
   /** A point which is on the boundary of the polygon */
   protected GeoPoint[] edgePoints = null;
-  /** Tracking the maximum distance we go at any one time, so to be sure it's legal */
-  protected double fullDistance = 0.0;
   /** Set to true when the polygon is complete */
   protected boolean isDone = false;
   /** A bounds object for each sided plane */
@@ -189,15 +187,24 @@ class GeoConcavePolygon extends GeoBasePolygon {
     for (int i = 0; i < points.size(); i++) {
       final GeoPoint start = points.get(i);
       final GeoPoint end = points.get(legalIndex(i + 1));
-      final double distance = start.arcDistance(end);
-      if (distance > fullDistance)
-        fullDistance = distance;
-      final GeoPoint check = points.get(legalIndex(i + 2));
-      // Here note the flip of the sense of the sided plane!!
-      final SidedPlane sp = new SidedPlane(check, false, start, end);
+      // We have to find the next point that is not on the plane between start and end.
+      // If there is no such point, it's an error.
+      final Plane planeToFind = new Plane(start, end);
+      int endPointIndex = -1;
+      for (int j = 0; j < points.size(); j++) {
+        final int index = legalIndex(j + i + 2);
+        if (!planeToFind.evaluateIsZero(points.get(index))) {
+          endPointIndex = index;
+          break;
+        }
+      }
+      if (endPointIndex == -1) {
+        throw new IllegalArgumentException("Polygon points are all coplanar");
+      }
+      final GeoPoint check = points.get(endPointIndex);
       //System.out.println("Created edge "+sp+" using start="+start+" end="+end+" check="+check);
-      edges[i] = sp;
-      invertedEdges[i] = new SidedPlane(sp);
+      edges[i] = new SidedPlane(check, false, start, end);
+      invertedEdges[i] = new SidedPlane(edges[i]);
       notableEdgePoints[i] = new GeoPoint[]{start, end};
     }
     // In order to naively confirm that the polygon is concave, I would need to
@@ -268,9 +275,11 @@ class GeoConcavePolygon extends GeoBasePolygon {
     // cannot use them as bounds.  They are independent hemispheres.
     for (int edgeIndex = 0; edgeIndex < edges.length; edgeIndex++) {
       final SidedPlane edge = edges[edgeIndex];
+      final SidedPlane invertedEdge = invertedEdges[edgeIndex];
       final GeoPoint[] points = this.notableEdgePoints[edgeIndex];
       if (!isInternalEdges.get(edgeIndex)) {
-        if (edge.intersects(planetModel, p, notablePoints, points, bounds, eitherBounds.get(edge))) {
+        //System.err.println("Checking concave edge "+edge+" for intersection against plane "+p);
+        if (invertedEdge.intersects(planetModel, p, notablePoints, points, bounds, eitherBounds.get(edge))) {
           //System.err.println(" intersects!");
           return true;
         }
@@ -295,6 +304,7 @@ class GeoConcavePolygon extends GeoBasePolygon {
     protected final SidedPlane exception;
     
     /** Constructor.
+      * @param exception is the one plane to exclude from the check.
       */
     public EitherBound(final SidedPlane exception) {
       this.exception = exception;
