@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
 
+//import org.apache.lucene.geo.EarthDebugger;
 import org.apache.lucene.geo.Polygon;
 import org.apache.lucene.geo.Rectangle;
 import org.apache.lucene.index.DocValues;
@@ -133,9 +134,17 @@ final class LatLonPointInPolygonQuery extends Query {
         } else {
           preApproved = new FixedBitSet(reader.maxDoc());
         }
+
+        //EarthDebugger earth = grid.earth;
+        //earth.addPolygon(polygons[0]);
+
         //final PointsStackTracker stackTracker = new PointsStackTracker();
         values.intersect(field, 
                          new IntersectVisitor() {
+                           //private byte[] lastMinPackedValue;
+                           //private byte[] lastMaxPackedValue;
+                           //private boolean lastWasSlow;
+
                            @Override
                            public void visit(int docID) {
                              result.add(docID);
@@ -144,6 +153,17 @@ final class LatLonPointInPolygonQuery extends Query {
 
                            @Override
                            public void visit(int docID, byte[] packedValue) {
+                             /*
+                             if (lastMinPackedValue != null) {
+                               earth.addRect(LatLonPoint.decodeLatitude(NumericUtils.sortableBytesToInt(lastMinPackedValue, 0)),
+                                             LatLonPoint.decodeLatitude(NumericUtils.sortableBytesToInt(lastMaxPackedValue, 0)),
+                                             LatLonPoint.decodeLongitude(NumericUtils.sortableBytesToInt(lastMinPackedValue, Integer.BYTES)),
+                                             LatLonPoint.decodeLongitude(NumericUtils.sortableBytesToInt(lastMaxPackedValue, Integer.BYTES)),
+                                             lastWasSlow ? "#00ff00" : "#ff0000");
+                               lastMinPackedValue = null;
+                             }
+                             */
+
                              // we bounds check individual values, as subtrees may cross, but we are being sent the values anyway:
                              // this reduces the amount of docvalues fetches (improves approximation)
                              if (StringHelper.compare(Integer.BYTES, packedValue, 0, maxLat, 0) > 0 ||
@@ -184,15 +204,21 @@ final class LatLonPointInPolygonQuery extends Query {
                              int cellMaxLat = NumericUtils.sortableBytesToInt(maxPackedValue, 0);
                              int cellMaxLon = NumericUtils.sortableBytesToInt(maxPackedValue, Integer.BYTES);
 
-                             return grid.relate(cellMinLat, cellMaxLat, cellMinLon, cellMaxLon);
+                             //lastMinPackedValue = minPackedValue.clone();
+                             //lastMaxPackedValue = maxPackedValue.clone();
+
+                             Relation r = grid.relate(cellMinLat, cellMaxLat, cellMinLon, cellMaxLon);
+                             //lastWasSlow = grid.wasSlow;
+                             return r;
                            }
                          });
 
         //System.out.println("EARTH:\n" + grid.earth.finish());
         /*
         try (PrintWriter out = new PrintWriter("/x/tmp/out4.html")) {
-          out.println(grid.earth.finish());
+          out.println(earth.finish());
         }
+        System.out.println("WROTE to out4.html");
         */
 
         DocIdSet set = result.build();

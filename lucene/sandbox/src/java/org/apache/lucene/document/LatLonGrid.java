@@ -124,15 +124,16 @@ final class LatLonGrid {
       /*
       if (relation == Relation.CELL_INSIDE_QUERY) {
         earth.addRect(LatLonPoint.decodeLatitude((int) cellMinLat), 
-                  LatLonPoint.decodeLatitude((int) cellMaxLat), 
-                  LatLonPoint.decodeLongitude((int) cellMinLon), 
-                  LatLonPoint.decodeLongitude((int) cellMaxLon),
-                  "#00ff00");
+                      LatLonPoint.decodeLatitude((int) cellMaxLat), 
+                      LatLonPoint.decodeLongitude((int) cellMinLon), 
+                      LatLonPoint.decodeLongitude((int) cellMaxLon),
+                      "#0000ff");
       } else {
         earth.addRect(LatLonPoint.decodeLatitude((int) cellMinLat), 
-                  LatLonPoint.decodeLatitude((int) cellMaxLat), 
-                  LatLonPoint.decodeLongitude((int) cellMinLon), 
-                  LatLonPoint.decodeLongitude((int) cellMaxLon));
+                      LatLonPoint.decodeLatitude((int) cellMaxLat), 
+                      LatLonPoint.decodeLongitude((int) cellMinLon), 
+                      LatLonPoint.decodeLongitude((int) cellMaxLon),
+                      "#0000ff");
       }
       */
 
@@ -168,7 +169,7 @@ final class LatLonGrid {
                           int queryMinLatIndex, int queryMaxLatIndex, int queryMinLonIndex, int queryMaxLonIndex,
                           int cellMinLatIndex, int cellMaxLatIndex, int cellMinLonIndex, int cellMaxLonIndex) {
 
-    if (DEBUG) System.out.println("    relate recurse nodeID=" + nodeID + " cellLat=" + cellMinLatIndex + "-" + cellMaxLatIndex + " cellLon=" + cellMinLonIndex + "-" + cellMaxLonIndex + " stack=" + stack);
+    if (DEBUG) System.out.println("    relate recurse nodeID=" + nodeID + " cellLat=" + cellMinLatIndex + "-" + cellMaxLatIndex + " cellLon=" + cellMinLonIndex + "-" + cellMaxLonIndex);
     if (nodeID >= LEAF_NODE_ID_START) {
       assert cellMinLatIndex == cellMaxLatIndex-1;
       assert cellMinLonIndex == cellMaxLonIndex-1;
@@ -335,9 +336,11 @@ final class LatLonGrid {
   private boolean sawOutside;
   private boolean sawInside;
   private boolean sawUnknown;
+  //public boolean wasSlow;
   
   /** Returns relation to the provided rectangle */
   Relation relate(int minLat, int maxLat, int minLon, int maxLon) {
+    //wasSlow = false;
     //relateCount++;
     // if the bounding boxes are disjoint then the shape does not cross
     if (maxLon < this.minLon || minLon > this.maxLon || maxLat < this.minLat || minLat > this.maxLat) {
@@ -389,7 +392,9 @@ final class LatLonGrid {
     /*
     relateSlowCount++;
     System.out.println("relate count " + relateCount + " (" + relateSlowCount + " slow)");
+    */
 
+    /*
     if (true || stackDepth == 16) {
       System.out.println("  add blue lat=" + LatLonPoint.decodeLatitude(minLat) + " TO " +
                          LatLonPoint.decodeLatitude(maxLat) + " lon=" + 
@@ -403,10 +408,21 @@ final class LatLonGrid {
     */
 
     // do it the hard way!
-    return Polygon.relate(polygons, LatLonPoint.decodeLatitude(minLat), 
-                                    LatLonPoint.decodeLatitude(maxLat), 
-                                    LatLonPoint.decodeLongitude(minLon), 
-                                    LatLonPoint.decodeLongitude(maxLon));
+
+    Relation r = Polygon.relate(polygons, LatLonPoint.decodeLatitude(minLat), 
+                                LatLonPoint.decodeLatitude(maxLat), 
+                                LatLonPoint.decodeLongitude(minLon), 
+                                LatLonPoint.decodeLongitude(maxLon));
+
+    /*
+    if (r != Relation.CELL_CROSSES_QUERY) {
+    wasSlow = true;
+    }
+    */
+
+    // nocommit
+    //return Relation.CELL_CROSSES_QUERY;
+    return r;
   }
   
   private int latCell(int latitude) {
