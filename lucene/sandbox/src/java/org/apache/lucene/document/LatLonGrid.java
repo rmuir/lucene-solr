@@ -173,12 +173,29 @@ final class LatLonGrid {
     }
   }
 
-  // NOTE: returns null if the tree couldn't answer the relation, and then caller must ask the Polygon
-  private Relation relate(int nodeID,
-                          int queryMinLatIndex, int queryMaxLatIndex, int queryMinLonIndex, int queryMaxLonIndex,
-                          int cellMinLatIndex, int cellMaxLatIndex, int cellMinLonIndex, int cellMaxLonIndex) {
+  /** Set if the query box touched any unknown parts */
+  private int FLAG_UNKNOWN = 1;
+
+  /** Set if the query box touched any known "inside the polygon" parts */
+  private int FLAG_INSIDE = 2;
+
+  /** Set if the query box touched any known "outside the polygon" parts */
+  private int FLAG_OUTSIDE = 4;
+
+  private int FLAG_INSIDE_AND_OUTSIDE = FLAG_INSIDE | FLAG_OUTSIDE;
+
+  /** Returns true if we should stop recursing in relate */
+  private boolean insideAndOutside(int flags) {
+    return (flags & FLAG_INSIDE_AND_OUTSIDE) == FLAG_INSIDE_AND_OUTSIDE;
+  }
+
+  /** Returns int flags, or'd from above flags */
+  private int relate(int nodeID,
+                     int queryMinLatIndex, int queryMaxLatIndex, int queryMinLonIndex, int queryMaxLonIndex,
+                     int cellMinLatIndex, int cellMaxLatIndex, int cellMinLonIndex, int cellMaxLonIndex) {
 
     if (DEBUG) System.out.println("    relate recurse nodeID=" + nodeID + " cellLat=" + cellMinLatIndex + "-" + cellMaxLatIndex + " cellLon=" + cellMinLonIndex + "-" + cellMaxLonIndex);
+
     if (nodeID >= LEAF_NODE_ID_START) {
       assert cellMinLatIndex == cellMaxLatIndex-1;
       assert cellMinLonIndex == cellMaxLonIndex-1;
@@ -188,15 +205,15 @@ final class LatLonGrid {
       if (haveAnswer.get(index)) {
         if (answer.get(index)) {
           if (DEBUG) System.out.println("      leaf return INSIDE");
-          return Relation.CELL_INSIDE_QUERY;
+          return FLAG_INSIDE;
         } else {
           if (DEBUG) System.out.println("      leaf return OUTSIDE");
-          return Relation.CELL_OUTSIDE_QUERY;
+          return FLAG_OUTSIDE;
         }
       } else {
         if (DEBUG) System.out.println("      leaf return null");
         // tree doesn't know the answer, and we are down at a leaf, so we must do a full check
-        return null;
+        return FLAG_UNKNOWN;
       }
 
     } else {
@@ -205,101 +222,56 @@ final class LatLonGrid {
         // the query box is a subset of this area, it doesn't change the answer
         if (answer.get(nodeID)) {
           if (DEBUG) System.out.println("      node have answer: INSIDE");
-          sawInside = true;
-          return Relation.CELL_INSIDE_QUERY;
+          return FLAG_INSIDE;
         } else {
           if (DEBUG) System.out.println("      node have answer: OUTSIDE");
-          sawOutside = true;
-          return Relation.CELL_OUTSIDE_QUERY;
+          return FLAG_OUTSIDE;
         }
       } else {
 
         int cellMidLatIndex = (cellMinLatIndex + cellMaxLatIndex) >>> 1;
         int cellMidLonIndex = (cellMinLonIndex + cellMaxLonIndex) >>> 1;
 
+        int flags = 0;
+
         // nocommit make sure tests hit all these ifs!!!
         if (queryMinLatIndex < cellMidLatIndex && queryMinLonIndex < cellMidLonIndex) {
-          Relation r = relate(4*nodeID,
-                              queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
-                              cellMinLatIndex, cellMidLatIndex, cellMinLonIndex, cellMidLonIndex);
-          if (r == Relation.CELL_CROSSES_QUERY) {
-            return Relation.CELL_CROSSES_QUERY;
-          } else if (r == Relation.CELL_INSIDE_QUERY) {
-            sawInside = true;
-          } else if (r == Relation.CELL_OUTSIDE_QUERY) {
-            sawOutside = true;
-          } else {
-            sawUnknown = true;
+          flags |= relate(4*nodeID,
+                          queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
+                          cellMinLatIndex, cellMidLatIndex, cellMinLonIndex, cellMidLonIndex);
+          if (insideAndOutside(flags)) {
+            return flags;
           }
-        }
-
-        if (sawInside && sawOutside) {
-          return Relation.CELL_CROSSES_QUERY;
         }
 
         if (queryMinLatIndex < cellMidLatIndex && queryMaxLonIndex >= cellMidLonIndex) {
-          Relation r = relate(4*nodeID+1,
-                              queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
-                              cellMinLatIndex, cellMidLatIndex, cellMidLonIndex, cellMaxLonIndex);
-          if (r == Relation.CELL_CROSSES_QUERY) {
-            return Relation.CELL_CROSSES_QUERY;
-          } else if (r == Relation.CELL_INSIDE_QUERY) {
-            sawInside = true;
-          } else if (r == Relation.CELL_OUTSIDE_QUERY) {
-            sawOutside = true;
-          } else {
-            sawUnknown = true;
+          flags |= relate(4*nodeID+1,
+                          queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
+                          cellMinLatIndex, cellMidLatIndex, cellMidLonIndex, cellMaxLonIndex);
+          if (insideAndOutside(flags)) {
+            return flags;
           }
-        }
-
-        if (sawInside && sawOutside) {
-          return Relation.CELL_CROSSES_QUERY;
         }
 
         if (queryMaxLatIndex >= cellMidLatIndex && queryMinLonIndex < cellMidLonIndex) {
-          Relation r = relate(4*nodeID+2,
-                              queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
-                              cellMidLatIndex, cellMaxLatIndex, cellMinLonIndex, cellMidLonIndex);
-          if (r == Relation.CELL_CROSSES_QUERY) {
-            return Relation.CELL_CROSSES_QUERY;
-          } else if (r == Relation.CELL_INSIDE_QUERY) {
-            sawInside = true;
-          } else if (r == Relation.CELL_OUTSIDE_QUERY) {
-            sawOutside = true;
-          } else {
-            sawUnknown = true;
+          flags |= relate(4*nodeID+2,
+                          queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
+                          cellMidLatIndex, cellMaxLatIndex, cellMinLonIndex, cellMidLonIndex);
+          if (insideAndOutside(flags)) {
+            return flags;
           }
-        }
-
-        if (sawInside && sawOutside) {
-          return Relation.CELL_CROSSES_QUERY;
         }
 
         if (queryMaxLatIndex >= cellMidLatIndex && queryMaxLonIndex >= cellMidLonIndex) {
-          Relation r = relate(4*nodeID+3,
-                              queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
-                              cellMidLatIndex, cellMaxLatIndex, cellMidLonIndex, cellMaxLonIndex);
-          if (r == Relation.CELL_CROSSES_QUERY) {
-            return Relation.CELL_CROSSES_QUERY;
-          } else if (r == Relation.CELL_INSIDE_QUERY) {
-            sawInside = true;
-          } else if (r == Relation.CELL_OUTSIDE_QUERY) {
-            sawOutside = true;
-          } else {
-            sawUnknown = true;
+          flags |= relate(4*nodeID+3,
+                          queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
+                          cellMidLatIndex, cellMaxLatIndex, cellMidLonIndex, cellMaxLonIndex);
+          if (insideAndOutside(flags)) {
+            return flags;
           }
         }
 
-        if (sawInside && sawOutside) {
-          return Relation.CELL_CROSSES_QUERY;
-        } else if (sawUnknown) {
-          return null;
-        } else if (sawInside) {
-          return Relation.CELL_INSIDE_QUERY;
-        } else {
-          assert sawOutside;
-          return Relation.CELL_OUTSIDE_QUERY;
-        }
+        return flags;
       }
     }
   }
@@ -341,11 +313,21 @@ final class LatLonGrid {
 
   //private int relateCount;
   //private int relateSlowCount;
-
-  private boolean sawOutside;
-  private boolean sawInside;
-  private boolean sawUnknown;
   //public boolean wasSlow;
+
+  private String toString(int flags) {
+    List<String> l = new ArrayList<>();
+    if ((flags | FLAG_INSIDE) != 0) {
+      l.add("INSIDE");
+    }
+    if ((flags | FLAG_OUTSIDE) != 0) {
+      l.add("OUTSIDE");
+    }
+    if ((flags | FLAG_UNKNOWN) != 0) {
+      l.add("UNKNOWN");
+    }
+    return l.toString();
+  }
   
   /** Returns relation to the provided rectangle */
   Relation relate(int minLat, int maxLat, int minLon, int maxLon) {
@@ -360,41 +342,43 @@ final class LatLonGrid {
       return Relation.CELL_CROSSES_QUERY;
     }
 
-    sawInside = false;
-    sawOutside = false;
-    sawUnknown = false;
-
     if (minLat >= this.minLat && maxLat <= this.maxLat && minLon >= this.minLon && maxLon <= this.maxLon) {
       if (DEBUG) System.out.println("  top relate: within query lat=" + latCell(minLat) + "-" + latCell(maxLat) + " lon=" + lonCell(minLon) + "-" + lonCell(maxLon));
       // query box is fully within our box, so the tree is authoritative if it has an answer:
-      Relation r = relate(1,
-                          latCell(minLat),
-                          latCell(maxLat),
-                          lonCell(minLon),
-                          lonCell(maxLon),
-                          0, GRID_SIZE, 0, GRID_SIZE);
-      if (DEBUG) System.out.println("    top relate: got " + r);
-      if (r != null) {
+      int flags = relate(1,
+                         latCell(minLat),
+                         latCell(maxLat),
+                         lonCell(minLon),
+                         lonCell(maxLon),
+                         0, GRID_SIZE, 0, GRID_SIZE);
+      if (DEBUG) System.out.println("    top relate: got " + toString(flags));
+
+      if (insideAndOutside(flags)) {
         // nocommit make sure tests hit this
         //System.out.println("tree1 says " + r);
-        return r;
+        return Relation.CELL_CROSSES_QUERY;
+      } else if (flags == FLAG_INSIDE) {
+        return Relation.CELL_INSIDE_QUERY;
+      } else if (flags == FLAG_OUTSIDE) {
+        return Relation.CELL_OUTSIDE_QUERY;
       }
     } else {
       if (DEBUG) System.out.println("  top relate: crosses query lat=" + latCell(Math.max(minLat, this.minLat)) + "-" + latCell(Math.min(maxLat, this.maxLat)) + " lon=" + lonCell(Math.max(minLon, this.minLon)) + "-" + lonCell(Math.min(maxLon, this.maxLon)));
-      sawOutside = true;
-      Relation r = relate(1,
-                          latCell(Math.max(minLat, this.minLat)),
-                          latCell(Math.min(maxLat, this.maxLat)),
-                          lonCell(Math.max(minLon, this.minLon)),
-                          lonCell(Math.min(maxLon, this.maxLon)),
-                          0, GRID_SIZE, 0, GRID_SIZE);
-      if (DEBUG) System.out.println("    top relate: got " + r);
-      if (r == Relation.CELL_INSIDE_QUERY) {
+      int flags = relate(1,
+                         latCell(Math.max(minLat, this.minLat)),
+                         latCell(Math.min(maxLat, this.maxLat)),
+                         lonCell(Math.max(minLon, this.minLon)),
+                         lonCell(Math.min(maxLon, this.maxLon)),
+                         0, GRID_SIZE, 0, GRID_SIZE);
+      // Because the query box goes outside the poly bbox it clearly touches outside parts:
+      flags |= FLAG_OUTSIDE;
+      if (DEBUG) System.out.println("    top relate: got " + toString(flags));
+      if (insideAndOutside(flags)) {
         return Relation.CELL_CROSSES_QUERY;
-      } else if (r != null) {
+      } else if (flags == FLAG_OUTSIDE) {
         // nocommit make sure tests hit this
         //System.out.println("tree2 says " + r);
-        return r;
+        return Relation.CELL_OUTSIDE_QUERY;
       }
     }
 
@@ -423,11 +407,9 @@ final class LatLonGrid {
                                           decodeLongitude(minLon), 
                                           decodeLongitude(maxLon));
 
-    /*
-    if (r != Relation.CELL_CROSSES_QUERY) {
-    wasSlow = true;
-    }
-    */
+    //if (r != Relation.CELL_CROSSES_QUERY) {
+    //wasSlow = true;
+    //}
 
     // nocommit
     //return Relation.CELL_CROSSES_QUERY;
