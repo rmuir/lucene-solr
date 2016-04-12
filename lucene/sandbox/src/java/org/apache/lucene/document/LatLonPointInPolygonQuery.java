@@ -17,11 +17,19 @@
 package org.apache.lucene.document;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Arrays;
 
+import org.apache.lucene.geo.Polygon;
 import org.apache.lucene.geo.Rectangle;
+import org.apache.lucene.index.DocValues;
+import org.apache.lucene.index.FieldInfo;
+import org.apache.lucene.index.LeafReader;
+import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.PointValues.IntersectVisitor;
 import org.apache.lucene.index.PointValues.Relation;
+import org.apache.lucene.index.PointValues;
+import org.apache.lucene.index.SortedNumericDocValues;
 import org.apache.lucene.search.ConstantScoreScorer;
 import org.apache.lucene.search.ConstantScoreWeight;
 import org.apache.lucene.search.DocIdSet;
@@ -31,19 +39,12 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.TwoPhaseIterator;
 import org.apache.lucene.search.Weight;
-import org.apache.lucene.index.PointValues;
-import org.apache.lucene.index.SortedNumericDocValues;
-import org.apache.lucene.index.DocValues;
-import org.apache.lucene.index.FieldInfo;
-import org.apache.lucene.index.LeafReader;
-import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.util.BitSet;
 import org.apache.lucene.util.DocIdSetBuilder;
 import org.apache.lucene.util.FixedBitSet;
 import org.apache.lucene.util.NumericUtils;
 import org.apache.lucene.util.SparseFixedBitSet;
 import org.apache.lucene.util.StringHelper;
-import org.apache.lucene.geo.Polygon;
 
 /** Finds all previously indexed points that fall within the specified polygons.
  *
@@ -132,6 +133,7 @@ final class LatLonPointInPolygonQuery extends Query {
         } else {
           preApproved = new FixedBitSet(reader.maxDoc());
         }
+        //final PointsStackTracker stackTracker = new PointsStackTracker();
         values.intersect(field, 
                          new IntersectVisitor() {
                            @Override
@@ -151,6 +153,19 @@ final class LatLonPointInPolygonQuery extends Query {
                                // outside of global bounding box range
                                return;
                              }
+
+                             // nocommit: hmm, why 1) did this change results????, 2) did this not help perf?
+                             /*
+                             int latBits = NumericUtils.sortableBytesToInt(packedValue, 0);
+                             int lonBits = NumericUtils.sortableBytesToInt(packedValue, Integer.BYTES);
+
+                             int x = grid.fastContains(latBits, lonBits);
+                             if (x == 0) {
+                               preApproved.set(docID);
+                             } else if (x == 2) {
+                               result.add(docID);
+                             }
+                             */
                              result.add(docID);
                            }
 
@@ -172,6 +187,13 @@ final class LatLonPointInPolygonQuery extends Query {
                              return grid.relate(cellMinLat, cellMaxLat, cellMinLon, cellMaxLon);
                            }
                          });
+
+        //System.out.println("EARTH:\n" + grid.earth.finish());
+        /*
+        try (PrintWriter out = new PrintWriter("/x/tmp/out4.html")) {
+          out.println(grid.earth.finish());
+        }
+        */
 
         DocIdSet set = result.build();
         final DocIdSetIterator disi = set.iterator();
