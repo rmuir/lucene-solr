@@ -141,14 +141,15 @@ final class LatLonPointInPolygonQuery extends Query {
         }
 
         //EarthDebugger earth = grid.earth;
-        //earth.addPolygon(polygons[0]);
 
         //final PointsStackTracker stackTracker = new PointsStackTracker();
         values.intersect(field, 
                          new IntersectVisitor() {
-                           //private byte[] lastMinPackedValue;
-                           //private byte[] lastMaxPackedValue;
-                           //private boolean lastWasSlow;
+                           /*
+                           private byte[] lastMinPackedValue;
+                           private byte[] lastMaxPackedValue;
+                           private boolean lastWasSlow;
+                           */
 
                            @Override
                            public void visit(int docID) {
@@ -160,10 +161,10 @@ final class LatLonPointInPolygonQuery extends Query {
                            public void visit(int docID, byte[] packedValue) {
                              /*
                              if (lastMinPackedValue != null) {
-                               earth.addRect(LatLonPoint.decodeLatitude(NumericUtils.sortableBytesToInt(lastMinPackedValue, 0)),
-                                             LatLonPoint.decodeLatitude(NumericUtils.sortableBytesToInt(lastMaxPackedValue, 0)),
-                                             LatLonPoint.decodeLongitude(NumericUtils.sortableBytesToInt(lastMinPackedValue, Integer.BYTES)),
-                                             LatLonPoint.decodeLongitude(NumericUtils.sortableBytesToInt(lastMaxPackedValue, Integer.BYTES)),
+                               earth.addRect(decodeLatitude(NumericUtils.sortableBytesToInt(lastMinPackedValue, 0)),
+                                             decodeLatitude(NumericUtils.sortableBytesToInt(lastMaxPackedValue, 0)),
+                                             decodeLongitude(NumericUtils.sortableBytesToInt(lastMinPackedValue, Integer.BYTES)),
+                                             decodeLongitude(NumericUtils.sortableBytesToInt(lastMaxPackedValue, Integer.BYTES)),
                                              lastWasSlow ? "#00ff00" : "#ff0000");
                                lastMinPackedValue = null;
                              }

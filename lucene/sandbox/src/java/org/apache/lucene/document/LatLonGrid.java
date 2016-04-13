@@ -56,6 +56,7 @@ final class LatLonGrid {
   private static final boolean DEBUG = false;
   // must be a power of two!
   private static final int GRID_SIZE = 1<<5;
+
   // bounding box of polygons
   private final int minLat;
   private final int maxLat;
@@ -71,7 +72,7 @@ final class LatLonGrid {
   
   private final Polygon[] polygons;
 
-  //public EarthDebugger earth;
+  // public EarthDebugger earth;
 
   LatLonGrid(int minLat, int maxLat, int minLon, int maxLon, Polygon... polygons) {
     this.minLat = minLat;
@@ -88,6 +89,13 @@ final class LatLonGrid {
     }
     long latitudeRange = maxLat - (long) minLat;
     long longitudeRange = maxLon - (long) minLon;
+
+    /*
+    earth = new EarthDebugger((decodeLatitude(minLat) + decodeLatitude(maxLat))/2.0,
+                              (decodeLongitude(minLon) + decodeLongitude(maxLon))/2.0,
+                              500000);
+    earth.addPolygon(polygons[0]);
+    */
 
     if (latitudeRange < GRID_SIZE || longitudeRange < GRID_SIZE) {
       // don't complicate fill right now if you pass e.g. emptyish stuff: make an "empty grid"
@@ -132,16 +140,16 @@ final class LatLonGrid {
 
       /*
       if (relation == Relation.CELL_INSIDE_QUERY) {
-        earth.addRect(LatLonPoint.decodeLatitude((int) cellMinLat), 
-                      LatLonPoint.decodeLatitude((int) cellMaxLat), 
-                      LatLonPoint.decodeLongitude((int) cellMinLon), 
-                      LatLonPoint.decodeLongitude((int) cellMaxLon),
+        earth.addRect(decodeLatitude((int) cellMinLat), 
+                      decodeLatitude((int) cellMaxLat), 
+                      decodeLongitude((int) cellMinLon), 
+                      decodeLongitude((int) cellMaxLon),
                       "#0000ff");
       } else {
-        earth.addRect(LatLonPoint.decodeLatitude((int) cellMinLat), 
-                      LatLonPoint.decodeLatitude((int) cellMaxLat), 
-                      LatLonPoint.decodeLongitude((int) cellMinLon), 
-                      LatLonPoint.decodeLongitude((int) cellMaxLon),
+        earth.addRect(decodeLatitude((int) cellMinLat), 
+                      decodeLatitude((int) cellMaxLat), 
+                      decodeLongitude((int) cellMinLon), 
+                      decodeLongitude((int) cellMaxLon),
                       "#0000ff");
       }
       */
@@ -216,63 +224,61 @@ final class LatLonGrid {
         return FLAG_UNKNOWN;
       }
 
-    } else {
-      if (haveAnswer.get(nodeID)) {
-        // we can stop recursing because this node knows if we are inside or outside, and even if
-        // the query box is a subset of this area, it doesn't change the answer
-        if (answer.get(nodeID)) {
-          if (DEBUG) System.out.println("      node have answer: INSIDE");
-          return FLAG_INSIDE;
-        } else {
-          if (DEBUG) System.out.println("      node have answer: OUTSIDE");
-          return FLAG_OUTSIDE;
-        }
+    } else if (haveAnswer.get(nodeID)) {
+      // we can stop recursing because this node knows if we are inside or outside, and even if
+      // the query box is a subset of this area, it doesn't change the answer
+      if (answer.get(nodeID)) {
+        if (DEBUG) System.out.println("      node have answer: INSIDE");
+        return FLAG_INSIDE;
       } else {
-
-        int cellMidLatIndex = (cellMinLatIndex + cellMaxLatIndex) >>> 1;
-        int cellMidLonIndex = (cellMinLonIndex + cellMaxLonIndex) >>> 1;
-
-        int flags = 0;
-
-        // nocommit make sure tests hit all these ifs!!!
-        if (queryMinLatIndex < cellMidLatIndex && queryMinLonIndex < cellMidLonIndex) {
-          flags |= relate(4*nodeID,
-                          queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
-                          cellMinLatIndex, cellMidLatIndex, cellMinLonIndex, cellMidLonIndex);
-          if (insideAndOutside(flags)) {
-            return flags;
-          }
-        }
-
-        if (queryMinLatIndex < cellMidLatIndex && queryMaxLonIndex >= cellMidLonIndex) {
-          flags |= relate(4*nodeID+1,
-                          queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
-                          cellMinLatIndex, cellMidLatIndex, cellMidLonIndex, cellMaxLonIndex);
-          if (insideAndOutside(flags)) {
-            return flags;
-          }
-        }
-
-        if (queryMaxLatIndex >= cellMidLatIndex && queryMinLonIndex < cellMidLonIndex) {
-          flags |= relate(4*nodeID+2,
-                          queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
-                          cellMidLatIndex, cellMaxLatIndex, cellMinLonIndex, cellMidLonIndex);
-          if (insideAndOutside(flags)) {
-            return flags;
-          }
-        }
-
-        if (queryMaxLatIndex >= cellMidLatIndex && queryMaxLonIndex >= cellMidLonIndex) {
-          flags |= relate(4*nodeID+3,
-                          queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
-                          cellMidLatIndex, cellMaxLatIndex, cellMidLonIndex, cellMaxLonIndex);
-          if (insideAndOutside(flags)) {
-            return flags;
-          }
-        }
-
-        return flags;
+        if (DEBUG) System.out.println("      node have answer: OUTSIDE");
+        return FLAG_OUTSIDE;
       }
+    } else {
+
+      int cellMidLatIndex = (cellMinLatIndex + cellMaxLatIndex) >>> 1;
+      int cellMidLonIndex = (cellMinLonIndex + cellMaxLonIndex) >>> 1;
+
+      int flags = 0;
+
+      // nocommit make sure tests hit all these ifs!!!
+      if (queryMinLatIndex < cellMidLatIndex && queryMinLonIndex < cellMidLonIndex) {
+        flags |= relate(4*nodeID,
+                        queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
+                        cellMinLatIndex, cellMidLatIndex, cellMinLonIndex, cellMidLonIndex);
+        if (insideAndOutside(flags)) {
+          return flags;
+        }
+      }
+
+      if (queryMinLatIndex < cellMidLatIndex && queryMaxLonIndex >= cellMidLonIndex) {
+        flags |= relate(4*nodeID+1,
+                        queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
+                        cellMinLatIndex, cellMidLatIndex, cellMidLonIndex, cellMaxLonIndex);
+        if (insideAndOutside(flags)) {
+          return flags;
+        }
+      }
+
+      if (queryMaxLatIndex >= cellMidLatIndex && queryMinLonIndex < cellMidLonIndex) {
+        flags |= relate(4*nodeID+2,
+                        queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
+                        cellMidLatIndex, cellMaxLatIndex, cellMinLonIndex, cellMidLonIndex);
+        if (insideAndOutside(flags)) {
+          return flags;
+        }
+      }
+
+      if (queryMaxLatIndex >= cellMidLatIndex && queryMaxLonIndex >= cellMidLonIndex) {
+        flags |= relate(4*nodeID+3,
+                        queryMinLatIndex, queryMaxLatIndex, queryMinLonIndex, queryMaxLonIndex,
+                        cellMidLatIndex, cellMaxLatIndex, cellMidLonIndex, cellMaxLonIndex);
+        if (insideAndOutside(flags)) {
+          return flags;
+        }
+      }
+
+      return flags;
     }
   }
   
@@ -311,8 +317,8 @@ final class LatLonGrid {
   }
   */
 
-  //private int relateCount;
-  //private int relateSlowCount;
+  //public static int relateCount;
+  //public static int relateSlowCount;
   //public boolean wasSlow;
 
   private String toString(int flags) {
@@ -382,8 +388,8 @@ final class LatLonGrid {
       }
     }
 
+    //relateSlowCount++;
     /*
-    relateSlowCount++;
     System.out.println("relate count " + relateCount + " (" + relateSlowCount + " slow)");
     */
 
@@ -407,9 +413,11 @@ final class LatLonGrid {
                                           decodeLongitude(minLon), 
                                           decodeLongitude(maxLon));
 
-    //if (r != Relation.CELL_CROSSES_QUERY) {
-    //wasSlow = true;
-    //}
+    /*
+    if (r != Relation.CELL_CROSSES_QUERY) {
+     wasSlow = true;
+    }
+    */
 
     // nocommit
     //return Relation.CELL_CROSSES_QUERY;
