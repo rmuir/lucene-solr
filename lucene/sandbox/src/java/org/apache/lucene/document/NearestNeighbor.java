@@ -18,7 +18,6 @@ package org.apache.lucene.document;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
@@ -27,15 +26,11 @@ import org.apache.lucene.geo.Rectangle;
 import org.apache.lucene.index.PointValues.IntersectVisitor;
 import org.apache.lucene.index.PointValues.Relation;
 import org.apache.lucene.util.Bits;
-import org.apache.lucene.util.NumericUtils;
 import org.apache.lucene.util.SloppyMath;
-import org.apache.lucene.util.StringHelper;
 import org.apache.lucene.util.bkd.BKDReader;
 
 import static org.apache.lucene.geo.GeoEncodingUtils.decodeLatitude;
 import static org.apache.lucene.geo.GeoEncodingUtils.decodeLongitude;
-import static org.apache.lucene.geo.GeoEncodingUtils.encodeLatitude;
-import static org.apache.lucene.geo.GeoEncodingUtils.encodeLongitude;
 
 /**
  * KNN search on top of 2D lat/lon indexed points.
@@ -85,25 +80,19 @@ class NearestNeighbor {
     final double pointLon;
     private int setBottomCounter;
 
-    // these are pre-encoded with LatLonPoint's encoding
-    final byte minLat[] = new byte[Integer.BYTES];
-    final byte maxLat[] = new byte[Integer.BYTES];
-    final byte minLon[] = new byte[Integer.BYTES];
-    final byte maxLon[] = new byte[Integer.BYTES];
+    private double minLon = Double.NEGATIVE_INFINITY;
+    private double maxLon = Double.POSITIVE_INFINITY;
+    private double minLat = Double.NEGATIVE_INFINITY;
+    private double maxLat = Double.POSITIVE_INFINITY;
+
     // second set of longitude ranges to check (for cross-dateline case)
-    final byte minLon2[] = new byte[Integer.BYTES];
+    private double minLon2 = Double.POSITIVE_INFINITY;
 
     public NearestVisitor(PriorityQueue<NearestHit> hitQueue, int topN, double pointLat, double pointLon) {
       this.hitQueue = hitQueue;
       this.topN = topN;
       this.pointLat = pointLat;
       this.pointLon = pointLon;
-      // initialize bounds to infinite
-      Arrays.fill(maxLat, (byte) 0xFF); 
-      Arrays.fill(maxLon, (byte) 0xFF); 
-      Arrays.fill(minLat, (byte) 0x0); 
-      Arrays.fill(minLon, (byte) 0x0);
-      Arrays.fill(minLon2, (byte) 0x0);
     }
 
     @Override
@@ -116,21 +105,19 @@ class NearestNeighbor {
         NearestHit hit = hitQueue.peek();
         Rectangle box = Rectangle.fromPointDistance(pointLat, pointLon, SloppyMath.haversinMeters(hit.distanceSortKey));
         //System.out.println("    update bbox to " + box);
-        NumericUtils.intToSortableBytes(encodeLatitude(box.minLat), minLat, 0);
-        NumericUtils.intToSortableBytes(encodeLatitude(box.maxLat), maxLat, 0);
-
-        // crosses dateline: split
+        minLat = box.minLat;
+        maxLat = box.maxLat;
         if (box.crossesDateline()) {
           // box1
-          NumericUtils.intToSortableBytes(Integer.MIN_VALUE, minLon, 0);
-          NumericUtils.intToSortableBytes(encodeLongitude(box.maxLon), maxLon, 0);
+          minLon = Double.NEGATIVE_INFINITY;
+          maxLon = box.maxLon;
           // box2
-          NumericUtils.intToSortableBytes(encodeLongitude(box.minLon), minLon2, 0);
+          minLon2 = box.minLon;
         } else {
-          NumericUtils.intToSortableBytes(encodeLongitude(box.minLon), minLon, 0);
-          NumericUtils.intToSortableBytes(encodeLongitude(box.maxLon), maxLon, 0);
+          minLon = box.minLon;
+          maxLon = box.maxLon;
           // disable box2
-          NumericUtils.intToSortableBytes(Integer.MAX_VALUE, minLon2, 0);
+          minLon2 = Double.POSITIVE_INFINITY;
         }
       }
       setBottomCounter++;
@@ -144,22 +131,18 @@ class NearestNeighbor {
         return;
       }
 
-      // bounding box check
-      if (StringHelper.compare(Integer.BYTES, packedValue, 0, maxLat, 0) > 0 ||
-          StringHelper.compare(Integer.BYTES, packedValue, 0, minLat, 0) < 0) {
-        // latitude out of bounding box range
-        return;
-      }
-
-      if ((StringHelper.compare(Integer.BYTES, packedValue, Integer.BYTES, maxLon, 0) > 0 ||
-           StringHelper.compare(Integer.BYTES, packedValue, Integer.BYTES, minLon, 0) < 0)
-          && StringHelper.compare(Integer.BYTES, packedValue, Integer.BYTES, minLon2, 0) < 0) {
-        // longitude out of bounding box range
-        return;
-      }
+      // TODO: work in int space, use haversinSortKey
 
       double docLatitude = decodeLatitude(packedValue, 0);
       double docLongitude = decodeLongitude(packedValue, Integer.BYTES);
+
+      // test bounding box
+      if (docLatitude < minLat || docLatitude > maxLat) {
+        return;
+      }
+      if ((docLongitude < minLon || docLongitude > maxLon) && (docLongitude < minLon2)) {
+        return;
+      }
 
       double distanceSortKey = SloppyMath.haversinSortKey(pointLat, pointLon, docLatitude, docLongitude);
 
@@ -264,16 +247,13 @@ class NearestNeighbor {
         //System.out.println("    non-leaf");
         // Non-leaf block: split into two cells and put them back into the queue:
 
-        if (StringHelper.compare(Integer.BYTES, cell.minPacked, 0, visitor.maxLat, 0) > 0 ||
-            StringHelper.compare(Integer.BYTES, cell.maxPacked, 0, visitor.minLat, 0) < 0) {
-          // latitude out of bounding box range
-          continue;
-        }
+        double cellMinLat = decodeLatitude(cell.minPacked, 0);
+        double cellMinLon = decodeLongitude(cell.minPacked, Integer.BYTES);
+        double cellMaxLat = decodeLatitude(cell.maxPacked, 0);
+        double cellMaxLon = decodeLongitude(cell.maxPacked, Integer.BYTES);
 
-        if ((StringHelper.compare(Integer.BYTES, cell.minPacked, Integer.BYTES, visitor.maxLon, 0) > 0 ||
-             StringHelper.compare(Integer.BYTES, cell.maxPacked, Integer.BYTES, visitor.minLon, 0) < 0)
-            && StringHelper.compare(Integer.BYTES, cell.maxPacked, Integer.BYTES, visitor.minLon2, 0) < 0) {
-          // longitude out of bounding box range
+        if (cellMaxLat < visitor.minLat || visitor.maxLat < cellMinLat || ((cellMaxLon < visitor.minLon || visitor.maxLon < cellMinLon) && cellMaxLon < visitor.minLon2)) {
+          // this cell is outside our search bbox; don't bother exploring any more
           continue;
         }
         
