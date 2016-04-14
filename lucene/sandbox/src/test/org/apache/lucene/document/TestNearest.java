@@ -182,10 +182,12 @@ public class TestNearest extends LuceneTestCase {
       double pointLon = GeoTestUtil.nextLongitude();
 
       // dumb brute force search to get the expected result:
+      // TODO: don't use NearestHit, it makes things confusing.
       NearestHit[] expectedHits = new NearestHit[lats.length];
       for(int id=0;id<lats.length;id++) {
         NearestHit hit = new NearestHit();
-        hit.distanceMeters = SloppyMath.haversinMeters(pointLat, pointLon, lats[id], lons[id]);
+        // actually the true distance value!!!!!
+        hit.distanceSortKey = SloppyMath.haversinMeters(pointLat, pointLon, lats[id], lons[id]);
         hit.docID = id;
         expectedHits[id] = hit;
       }
@@ -193,7 +195,7 @@ public class TestNearest extends LuceneTestCase {
       Arrays.sort(expectedHits, new Comparator<NearestHit>() {
           @Override
           public int compare(NearestHit a, NearestHit b) {
-            int cmp = Double.compare(a.distanceMeters, b.distanceMeters);
+            int cmp = Double.compare(a.distanceSortKey, b.distanceSortKey);
             if (cmp != 0) {
               return cmp;
             }
@@ -220,15 +222,15 @@ public class TestNearest extends LuceneTestCase {
 
         if (VERBOSE) {
           System.out.println("hit " + i);
-          System.out.println("  expected id=" + expected.docID + " lat=" + lats[expected.docID] + " lon=" + lons[expected.docID] + " distance=" + expected.distanceMeters + " meters");
+          System.out.println("  expected id=" + expected.docID + " lat=" + lats[expected.docID] + " lon=" + lons[expected.docID] + " distance=" + expected.distanceSortKey + " meters");
           System.out.println("  actual id=" + actualDoc.getField("id") + " distance=" + actual.fields[0] + " meters");
         }
 
         assertEquals(expected.docID, actual.doc);
-        assertEquals(expected.distanceMeters, ((Double) actual.fields[0]).doubleValue(), 0.0);
+        assertEquals(expected.distanceSortKey, ((Double) actual.fields[0]).doubleValue(), 0.0);
 
         assertEquals(expected.docID, expected.docID);
-        assertEquals(((Double) expected2.fields[0]).doubleValue(), expected.distanceMeters, 0.0);
+        assertEquals(((Double) expected2.fields[0]).doubleValue(), expected.distanceSortKey, 0.0);
       }
     }
 

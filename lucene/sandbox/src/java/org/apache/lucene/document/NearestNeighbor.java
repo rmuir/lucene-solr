@@ -66,7 +66,7 @@ class NearestNeighbor {
       double minLon = decodeLongitude(minPacked, Integer.BYTES);
       double maxLat = decodeLatitude(maxPacked, 0);
       double maxLon = decodeLongitude(maxPacked, Integer.BYTES);
-      return "Cell(readerIndex=" + readerIndex + " lat=" + minLat + " TO " + maxLat + ", lon=" + minLon + " TO " + maxLon + "; distanceMeters=" + distanceMeters + ")";
+      return "Cell(readerIndex=" + readerIndex + " lat=" + minLat + " TO " + maxLat + ", lon=" + minLon + " TO " + maxLon + "; distanceSortKey=" + distanceMeters + ")";
     }
   }
 
@@ -103,7 +103,7 @@ class NearestNeighbor {
     private void maybeUpdateBBox() {
       if (setBottomCounter < 1024 || (setBottomCounter & 0x3F) == 0x3F) {
         NearestHit hit = hitQueue.peek();
-        Rectangle box = Rectangle.fromPointDistance(pointLat, pointLon, hit.distanceMeters);
+        Rectangle box = Rectangle.fromPointDistance(pointLat, pointLon, SloppyMath.haversinMeters(hit.distanceSortKey));
         //System.out.println("    update bbox to " + box);
         minLat = box.minLat;
         maxLat = box.maxLat;
@@ -144,21 +144,21 @@ class NearestNeighbor {
         return;
       }
 
-      double distanceMeters = SloppyMath.haversinMeters(pointLat, pointLon, docLatitude, docLongitude);
+      double distanceSortKey = SloppyMath.haversinSortKey(pointLat, pointLon, docLatitude, docLongitude);
 
-      //System.out.println("    visit docID=" + docID + " distanceMeters=" + distanceMeters + " docLat=" + docLatitude + " docLon=" + docLongitude);
+      //System.out.println("    visit docID=" + docID + " distanceSortKey=" + distanceSortKey + " docLat=" + docLatitude + " docLon=" + docLongitude);
 
       int fullDocID = curDocBase + docID;
 
       if (hitQueue.size() == topN) {
         // queue already full
         NearestHit hit = hitQueue.peek();
-        //System.out.println("      bottom distanceMeters=" + hit.distanceMeters);
+        //System.out.println("      bottom distanceSortKey=" + hit.distanceMeters);
         // we don't collect docs in order here, so we must also test the tie-break case ourselves:
-        if (distanceMeters < hit.distanceMeters || (distanceMeters == hit.distanceMeters && fullDocID < hit.docID)) {
+        if (distanceSortKey < hit.distanceSortKey || (distanceSortKey == hit.distanceSortKey && fullDocID < hit.docID)) {
           hitQueue.poll();
           hit.docID = fullDocID;
-          hit.distanceMeters = distanceMeters;
+          hit.distanceSortKey = distanceSortKey;
           hitQueue.offer(hit);
           //System.out.println("      ** keep2, now bottom=" + hit);
           maybeUpdateBBox();
@@ -167,7 +167,7 @@ class NearestNeighbor {
       } else {
         NearestHit hit = new NearestHit();
         hit.docID = fullDocID;
-        hit.distanceMeters = distanceMeters;
+        hit.distanceSortKey = distanceSortKey;
         hitQueue.offer(hit);
         //System.out.println("      ** keep1, now bottom=" + hit);
       }
@@ -182,11 +182,11 @@ class NearestNeighbor {
   /** Holds one hit from {@link LatLonPoint#nearest} */
   static class NearestHit {
     public int docID;
-    public double distanceMeters;
+    public double distanceSortKey;
 
     @Override
     public String toString() {
-      return "NearestHit(docID=" + docID + " distanceMeters=" + distanceMeters + ")";
+      return "NearestHit(docID=" + docID + " distanceSortKey=" + distanceSortKey + ")";
     }
   }
 
@@ -201,8 +201,8 @@ class NearestNeighbor {
     final PriorityQueue<NearestHit> hitQueue = new PriorityQueue<>(n, new Comparator<NearestHit>() {
         @Override
         public int compare(NearestHit a, NearestHit b) {
-          // sort by opposite distanceMeters natural order
-          int cmp = Double.compare(a.distanceMeters, b.distanceMeters);
+          // sort by opposite distanceSortKey natural order
+          int cmp = Double.compare(a.distanceSortKey, b.distanceSortKey);
           if (cmp != 0) {
             return -cmp;
           }
@@ -299,10 +299,10 @@ class NearestNeighbor {
       return 0.0;
     }
 
-    double d1 = SloppyMath.haversinMeters(pointLat, pointLon, minLat, minLon);
-    double d2 = SloppyMath.haversinMeters(pointLat, pointLon, minLat, maxLon);
-    double d3 = SloppyMath.haversinMeters(pointLat, pointLon, maxLat, maxLon);
-    double d4 = SloppyMath.haversinMeters(pointLat, pointLon, maxLat, minLon);
+    double d1 = SloppyMath.haversinSortKey(pointLat, pointLon, minLat, minLon);
+    double d2 = SloppyMath.haversinSortKey(pointLat, pointLon, minLat, maxLon);
+    double d3 = SloppyMath.haversinSortKey(pointLat, pointLon, maxLat, maxLon);
+    double d4 = SloppyMath.haversinSortKey(pointLat, pointLon, maxLat, minLon);
     return Math.min(Math.min(d1, d2), Math.min(d3, d4));
   }
 }

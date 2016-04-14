@@ -42,6 +42,7 @@ import org.apache.lucene.search.TopFieldDocs;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.NumericUtils;
+import org.apache.lucene.util.SloppyMath;
 import org.apache.lucene.util.bkd.BKDReader;
 
 import static org.apache.lucene.geo.GeoEncodingUtils.decodeLatitude;
@@ -336,7 +337,7 @@ public class LatLonPoint extends Field {
     ScoreDoc[] scoreDocs = new ScoreDoc[hits.length];
     for(int i=0;i<hits.length;i++) {
       NearestNeighbor.NearestHit hit = hits[i];
-      scoreDocs[i] = new FieldDoc(hit.docID, 0.0f, new Object[] {Double.valueOf(hit.distanceMeters)});
+      scoreDocs[i] = new FieldDoc(hit.docID, 0.0f, new Object[] {Double.valueOf(SloppyMath.haversinMeters(hit.distanceSortKey))});
     }
     return new TopFieldDocs(totalHits, scoreDocs, null, 0.0f);
   }
