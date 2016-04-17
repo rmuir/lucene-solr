@@ -442,7 +442,18 @@ public class GeoTestUtil {
    return RandomizedContext.current().getRandom();
   }
 
-  /** Returns svg of polygon for debugging. */
+  /** 
+   * Returns svg of polygon for debugging. 
+   * <p>
+   * You can pass any number of objects:
+   * Polygon: polygon with optional holes
+   * Polygon[]: arrays of polygons for convenience
+   * Rectangle: for a box
+   * double[2]: as latitude,longitude for a point
+   * <p>
+   * At least one object must be a polygon. The viewBox is formed around all polygons
+   * found in the arguments.
+   */
   public static String toSVG(Object ...objects) {
     List<Object> flattened = new ArrayList<>();
     for (Object o : objects) {
@@ -461,18 +472,15 @@ public class GeoTestUtil {
       final Rectangle r;
       if (o instanceof Polygon) {
         r = Rectangle.fromPolygon(new Polygon[] { (Polygon) o });
-      } else if (o instanceof Rectangle) {
-        r = (Rectangle) o;
-      } else if (o instanceof double[]) {
-        double point[] = (double[]) o;
-        r = new Rectangle(point[0], point[0], point[1], point[1]);
-      } else {
-        throw new UnsupportedOperationException("Unsupported element: " + o.getClass());
+        minLat = Math.min(minLat, r.minLat);
+        maxLat = Math.max(maxLat, r.maxLat);
+        minLon = Math.min(minLon, r.minLon);
+        maxLon = Math.max(maxLon, r.maxLon);
       }
-      minLat = Math.min(minLat, r.minLat);
-      maxLat = Math.max(maxLat, r.maxLat);
-      minLon = Math.min(minLon, r.minLon);
-      maxLon = Math.max(maxLon, r.maxLon);
+    }
+    if (Double.isFinite(minLat) == false || Double.isFinite(maxLat) == false ||
+        Double.isFinite(minLon) == false || Double.isFinite(maxLon) == false) {
+      throw new IllegalArgumentException("you must pass at least one polygon");
     }
     
     // add some additional padding so we can really see what happens on the edges too
@@ -497,36 +505,38 @@ public class GeoTestUtil {
       // tostring
       if (o instanceof double[]) {
         double point[] = (double[]) o;
-        sb.append("<!-- point: \n");
+        sb.append("<!-- point: ");
         sb.append(point[0] + "," + point[1]);
+        sb.append(" -->\n");
       } else {
         sb.append("<!-- " + o.getClass().getSimpleName() + ": \n");
         sb.append(o.toString());
+        sb.append("\n-->\n");
       }
-      sb.append("\n-->\n");
       final Polygon gon;
-      final String color;
-      final String strokeColor;
+      final String style;
+      final String opacity;
       if (o instanceof Rectangle) {
         gon = boxPolygon((Rectangle) o);
-        color = "lightskyblue";
-        strokeColor = "black";
+        style = "fill:lightskyblue;stroke:black;stroke-width:0.2%;stroke-dasharray:0.5%,1%;";
+        opacity = "0.3";
       } else if (o instanceof double[]) {
         double point[] = (double[]) o;
         gon = boxPolygon(new Rectangle(Math.max(-90, point[0]-pointY), 
                                       Math.min(90, point[0]+pointY), 
                                       Math.max(-180, point[1]-pointX), 
                                       Math.min(180, point[1]+pointX)));
-        color = strokeColor = "red";
+        style = "fill:red;stroke:red;stroke-width:0.1%;";
+        opacity = "0.7";
       } else {
         gon = (Polygon) o;
-        color = "lawngreen";
-        strokeColor = "black";
+        style = "fill:lawngreen;stroke:black;stroke-width:0.3%;";
+        opacity = "0.5";
       }
       // polygon
       double polyLats[] = gon.getPolyLats();
       double polyLons[] = gon.getPolyLons();
-      sb.append("<polygon fill-opacity=\"0.5\" points=\"");
+      sb.append("<polygon fill-opacity=\"" + opacity + "\" points=\"");
       for (int i = 0; i < polyLats.length; i++) {
         if (i > 0) {
           sb.append(" ");
@@ -535,7 +545,7 @@ public class GeoTestUtil {
         .append(",")
         .append(90 - polyLats[i]);
       }
-      sb.append("\" style=\"fill:" + color + ";stroke:" + strokeColor + ";stroke-width:0.3%\"/>\n");
+      sb.append("\" style=\"" + style + "\"/>\n");
       for (Polygon hole : gon.getHoles()) {
         double holeLats[] = hole.getPolyLats();
         double holeLons[] = hole.getPolyLons();

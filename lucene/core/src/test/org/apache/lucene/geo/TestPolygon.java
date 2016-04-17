@@ -103,17 +103,17 @@ public class TestPolygon extends LuceneTestCase {
     double polyLats[] = polygon.getPolyLats();
     double polyLons[] = polygon.getPolyLons();
     for (int vertex = 0; vertex < polyLats.length; vertex++) {
-      for (int i = 0; i < 10; i++) {
+      for (int i = 0; i < 500; i++) {
         double latitude = GeoTestUtil.nextLatitudeNear(polyLats[vertex]);
         double longitude = GeoTestUtil.nextLongitudeNear(polyLons[vertex]);
-        // for this "demo" just include points in the bounding box. otherwise it always scales poly to be small
-        if (latitude >= polygon.minLat && latitude <= polygon.maxLat && 
-            longitude >= polygon.minLon && longitude <= polygon.maxLon) {
-          objects.add(new double[] { latitude, longitude });
-        }
+        objects.add(new double[] { latitude, longitude });
+      }
+      for (int i = 0; i < 1; i++) {
+        Rectangle box = GeoTestUtil.nextSimpleBoxNear(polyLats[vertex], polyLons[vertex]);
+          objects.add(box);
       }
     }
-    //System.out.println(GeoTestUtil.toSVG(objects.toArray()));
+    System.out.println(GeoTestUtil.toSVG(objects.toArray()));
   }
   
   public void testPacMan() throws Exception {
