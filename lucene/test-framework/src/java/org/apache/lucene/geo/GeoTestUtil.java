@@ -28,64 +28,89 @@ import com.carrotsearch.randomizedtesting.RandomizedContext;
 /** static methods for testing geo */
 public class GeoTestUtil {
 
-  private static final long LATITUDE_MIN_SORTABLE = NumericUtils.doubleToSortableLong(-90);
-  private static final long LATITUDE_MAX_SORTABLE = NumericUtils.doubleToSortableLong(90);
-
   /** returns next pseudorandom latitude (anywhere) */
   public static double nextLatitude() {
-    int surpriseMe = random().nextInt(17);
-    if (surpriseMe == 0) {
-      // random bitpattern in range
-      return NumericUtils.sortableLongToDouble(TestUtil.nextLong(random(), LATITUDE_MIN_SORTABLE, LATITUDE_MAX_SORTABLE));
-    } else if (surpriseMe == 1) {
-      // edge case
-      return -90.0;
-    } else if (surpriseMe == 2) {
-      // edge case
-      return 90.0;
-    } else if (surpriseMe == 3) {
-      // may trigger divide by zero
-      return 0.0;
-    } else {
-      // distributed ~ evenly
-      return -90 + 180.0 * random().nextDouble();
-    }
+    return nextDoubleInternal(-90, 90);
   }
-
-  private static final long LONGITUDE_MIN_SORTABLE = NumericUtils.doubleToSortableLong(-180);
-  private static final long LONGITUDE_MAX_SORTABLE = NumericUtils.doubleToSortableLong(180);
 
   /** returns next pseudorandom longitude (anywhere) */
   public static double nextLongitude() {
+    return nextDoubleInternal(-180, 180);
+  }
+  
+  /**
+   * Returns next double within range.
+   * <p>
+   * Don't pass huge numbers or infinity or anything like that yet. may have bugs!
+   */
+  // the goal is to adjust random number generation to test edges, create more duplicates, create "one-offs" in floating point space, etc.
+  // we do this by first picking a good "base value" (explicitly targeting edges, zero if allowed, or "discrete values"). but it also
+  // ensures we pick any double in the range and generally still produces randomish looking numbers.
+  // then we sometimes perturb that by one ulp.
+  private static double nextDoubleInternal(double low, double high) {
+    assert low >= Integer.MIN_VALUE;
+    assert high <= Integer.MAX_VALUE;
+    assert Double.isFinite(low);
+    assert Double.isFinite(high);
+    assert high >= low;
+
+    // first pick a base value.
+    final double baseValue;
     int surpriseMe = random().nextInt(17);
     if (surpriseMe == 0) {
-      // random bitpattern in range
-      return NumericUtils.sortableLongToDouble(TestUtil.nextLong(random(), LONGITUDE_MIN_SORTABLE, LONGITUDE_MAX_SORTABLE));
+      // random bits
+      long lowBits = NumericUtils.doubleToSortableLong(low);
+      long highBits = NumericUtils.doubleToSortableLong(high);
+      baseValue = NumericUtils.sortableLongToDouble(TestUtil.nextLong(random(), lowBits, highBits));
     } else if (surpriseMe == 1) {
       // edge case
-      return -180.0;
+      baseValue = low;
     } else if (surpriseMe == 2) {
       // edge case
-      return 180.0;
-    } else if (surpriseMe == 3) {
+      baseValue = high;
+    } else if (surpriseMe == 3 && low <= 0 && high >= 0) {
       // may trigger divide by 0
-      return 0.0;
+      baseValue = 0.0;
+    } else if (surpriseMe == 4) {
+      // divide up space into block of 360
+      double delta = (high - low) / 360;
+      int block = random().nextInt(360);
+      baseValue = low + delta * block;
     } else {
       // distributed ~ evenly
-      return -180 + 360.0 * random().nextDouble();
+      baseValue = low + (high - low) * random().nextDouble();
     }
+
+    assert baseValue >= low;
+    assert baseValue <= high;
+
+    // either return the base value or adjust it by 1 ulp in a random direction (if possible)
+    int adjustMe = random().nextInt(17);
+    if (adjustMe == 0) {
+      return Math.nextAfter(adjustMe, high);
+    } else if (adjustMe == 1) {
+      return Math.nextAfter(adjustMe, low);
+    } else {
+      return baseValue;
+    }
+  }
+  
+  private static double nextDoubleNearInternal(double value, double delta, double low, double high) {
+    double lower = Math.max(low, value - delta);
+    double upper = Math.min(high, value + delta);
+    return nextDoubleInternal(lower, upper);
   }
 
   /** returns next pseudorandom latitude, kinda close to {@code otherLatitude} */
   public static double nextLatitudeNear(double otherLatitude) {
     GeoUtils.checkLatitude(otherLatitude);
-    return normalizeLatitude(otherLatitude + random().nextDouble() - 0.5);
+    return nextDoubleNearInternal(otherLatitude, 0.5, -90, 90);
   }
 
   /** returns next pseudorandom longitude, kinda close to {@code otherLongitude} */
   public static double nextLongitudeNear(double otherLongitude) {
     GeoUtils.checkLongitude(otherLongitude);
-    return normalizeLongitude(otherLongitude + random().nextDouble() - 0.5);
+    return nextDoubleNearInternal(otherLongitude, 0.5, -180, 180);
   }
 
   /**
@@ -96,7 +121,10 @@ public class GeoTestUtil {
   public static double nextLatitudeAround(double minLatitude, double maxLatitude) {
     GeoUtils.checkLatitude(minLatitude);
     GeoUtils.checkLatitude(maxLatitude);
-    return normalizeLatitude(randomRangeMaybeSlightlyOutside(minLatitude, maxLatitude));
+    double difference = (maxLatitude - minLatitude) / 100;
+    double lower = Math.max(-90, minLatitude - difference);
+    double upper = Math.max(90, maxLatitude + difference);
+    return nextDoubleInternal(lower, upper);
   }
 
   /**
@@ -107,7 +135,10 @@ public class GeoTestUtil {
   public static double nextLongitudeAround(double minLongitude, double maxLongitude) {
     GeoUtils.checkLongitude(minLongitude);
     GeoUtils.checkLongitude(maxLongitude);
-    return normalizeLongitude(randomRangeMaybeSlightlyOutside(minLongitude, maxLongitude));
+    double difference = (maxLongitude - minLongitude) / 100;
+    double lower = Math.max(-180, minLongitude - difference);
+    double upper = Math.max(180, maxLongitude + difference);
+    return nextDoubleInternal(lower, upper);
   }
 
   /** returns next pseudorandom box: can cross the 180th meridian */
@@ -371,10 +402,6 @@ public class GeoTestUtil {
     }
   }
 
-  /** Returns random double min to max or up to 1% outside of that range */
-  private static double randomRangeMaybeSlightlyOutside(double min, double max) {
-    return min + (random().nextDouble() + (0.5 - random().nextDouble()) * .02) * (max - min);
-  }
 
   /** Puts latitude in range of -90 to 90. */
   private static double normalizeLatitude(double latitude) {
