@@ -52,7 +52,12 @@ public class GeoTestUtil {
     assert high <= Integer.MAX_VALUE;
     assert Double.isFinite(low);
     assert Double.isFinite(high);
-    assert high >= low;
+    assert high >= low : "low=" + low + " high=" + high;
+    
+    // if they are equal, not much we can do
+    if (low == high) {
+      return low;
+    }
 
     // first pick a base value.
     final double baseValue;
@@ -94,23 +99,37 @@ public class GeoTestUtil {
       return baseValue;
     }
   }
-  
-  private static double nextDoubleNearInternal(double value, double delta, double low, double high) {
-    double lower = Math.max(low, value - delta);
-    double upper = Math.min(high, value + delta);
-    return nextDoubleInternal(lower, upper);
-  }
 
   /** returns next pseudorandom latitude, kinda close to {@code otherLatitude} */
   public static double nextLatitudeNear(double otherLatitude) {
     GeoUtils.checkLatitude(otherLatitude);
-    return nextDoubleNearInternal(otherLatitude, 0.5, -90, 90);
+    int surpriseMe = random().nextInt(11);
+    if (surpriseMe == 10) {
+      // purely random
+      return nextLatitude();
+    } else if (surpriseMe < 5) {
+      // upper half of region (the exact point or 1 ulp difference is still likely)
+      return nextDoubleInternal(otherLatitude, Math.min(90, otherLatitude + 0.5));
+    } else {
+      // lower half of region (the exact point or 1 ulp difference is still likely)
+      return nextDoubleInternal(Math.max(-90, otherLatitude - 0.5), otherLatitude);
+    }
   }
 
   /** returns next pseudorandom longitude, kinda close to {@code otherLongitude} */
   public static double nextLongitudeNear(double otherLongitude) {
     GeoUtils.checkLongitude(otherLongitude);
-    return nextDoubleNearInternal(otherLongitude, 0.5, -180, 180);
+    int surpriseMe = random().nextInt(11);
+    if (surpriseMe == 10) {
+      // purely random
+      return nextLongitude();
+    } else if (surpriseMe < 5) {
+      // upper half of region (the exact point or 1 ulp difference is still likely)
+      return nextDoubleInternal(otherLongitude, Math.min(180, otherLongitude + 0.5));
+    } else {
+      // lower half of region (the exact point or 1 ulp difference is still likely)
+      return nextDoubleInternal(Math.max(-180, otherLongitude - 0.5), otherLongitude);
+    }
   }
 
   /**
@@ -119,12 +138,19 @@ public class GeoTestUtil {
    * outside of that range! this is to facilitate edge testing.
    */
   public static double nextLatitudeAround(double minLatitude, double maxLatitude) {
+    assert maxLatitude >= minLatitude;
     GeoUtils.checkLatitude(minLatitude);
     GeoUtils.checkLatitude(maxLatitude);
-    double difference = (maxLatitude - minLatitude) / 100;
-    double lower = Math.max(-90, minLatitude - difference);
-    double upper = Math.max(90, maxLatitude + difference);
-    return nextDoubleInternal(lower, upper);
+    if (random().nextInt(47) == 0) {
+      // purely random
+      return nextLatitude();
+    } else {
+      // extend the range by 1%
+      double difference = (maxLatitude - minLatitude) / 100;
+      double lower = Math.max(-90, minLatitude - difference);
+      double upper = Math.min(90, maxLatitude + difference);
+      return nextDoubleInternal(lower, upper);
+    }
   }
 
   /**
@@ -133,12 +159,19 @@ public class GeoTestUtil {
    * outside of that range! this is to facilitate edge testing.
    */
   public static double nextLongitudeAround(double minLongitude, double maxLongitude) {
+    assert maxLongitude >= minLongitude;
     GeoUtils.checkLongitude(minLongitude);
     GeoUtils.checkLongitude(maxLongitude);
-    double difference = (maxLongitude - minLongitude) / 100;
-    double lower = Math.max(-180, minLongitude - difference);
-    double upper = Math.max(180, maxLongitude + difference);
-    return nextDoubleInternal(lower, upper);
+    if (random().nextInt(47) == 0) {
+      // purely random
+      return nextLongitude();
+    } else {
+      // extend the range by 1%
+      double difference = (maxLongitude - minLongitude) / 100;
+      double lower = Math.max(-180, minLongitude - difference);
+      double upper = Math.min(180, maxLongitude + difference);
+      return nextDoubleInternal(lower, upper);
+    }
   }
 
   /** returns next pseudorandom box: can cross the 180th meridian */
@@ -402,33 +435,58 @@ public class GeoTestUtil {
     }
   }
 
-
-  /** Puts latitude in range of -90 to 90. */
-  private static double normalizeLatitude(double latitude) {
-    if (latitude >= -90 && latitude <= 90) {
-      return latitude; //common case, and avoids slight double precision shifting
-    }
-    double off = Math.abs((latitude + 90) % 360);
-    return (off <= 180 ? off : 360-off) - 90;
-  }
-
-  /** Puts longitude in range of -180 to +180. */
-  private static double normalizeLongitude(double longitude) {
-    if (longitude >= -180 && longitude <= 180) {
-      return longitude; //common case, and avoids slight double precision shifting
-    }
-    double off = (longitude + 180) % 360;
-    if (off < 0) {
-      return 180 + off;
-    } else if (off == 0 && longitude > 0) {
-      return 180;
-    } else {
-      return -180 + off;
-    }
-  }
-
   /** Keep it simple, we don't need to take arbitrary Random for geo tests */
   private static Random random() {
    return RandomizedContext.current().getRandom();
+  }
+
+  /** Returns svg of polygon for debugging. */
+  public static String toSVG(Polygon... gons) {
+    Rectangle box = Rectangle.fromPolygon(gons);
+    double xpadding = (box.maxLon - box.minLon) / 64;
+    double ypadding = (box.maxLat - box.minLat) / 64;
+    StringBuilder sb = new StringBuilder();
+    sb.append("<svg xmlns=\"http://www.w3.org/2000/svg\" height=\"640\" width=\"480\" viewBox=\"");
+    sb.append(box.minLon - xpadding)
+      .append(" ")
+      .append(90 - box.maxLat - ypadding)
+      .append(" ")
+      .append(box.maxLon - box.minLon + (2*xpadding))
+      .append(" ")
+      .append(box.maxLat - box.minLat + (2*ypadding));
+    sb.append("\">\n");
+    for (Polygon gon : gons) {
+      sb.append("<!-- Polygon points: \n");
+      sb.append(gon.toString());
+      sb.append("\n-->\n");
+      double polyLats[] = gon.getPolyLats();
+      double polyLons[] = gon.getPolyLons();
+      sb.append("<polygon points=\"");
+      for (int i = 0; i < polyLats.length; i++) {
+        if (i > 0) {
+          sb.append(" ");
+        }
+        sb.append(polyLons[i])
+        .append(",")
+        .append(90 - polyLats[i]);
+      }
+      sb.append("\" style=\"fill:lawngreen;stroke:black;stroke-width:0.3%\"/>\n");
+      for (Polygon hole : gon.getHoles()) {
+        double holeLats[] = hole.getPolyLats();
+        double holeLons[] = hole.getPolyLons();
+        sb.append("<polygon points=\"");
+        for (int i = 0; i < holeLats.length; i++) {
+          if (i > 0) {
+            sb.append(" ");
+          }
+          sb.append(holeLons[i])
+          .append(",")
+          .append(90 - holeLats[i]);
+        }
+        sb.append("\" style=\"fill:lightgray\"/>\n");
+      }
+    }
+    sb.append("</svg>\n");
+    return sb.toString();
   }
 }

@@ -96,7 +96,7 @@ public class TestGeoUtils extends LuceneTestCase {
           lat = GeoTestUtil.nextLatitudeAround(bbox.minLat, bbox.maxLat);
           if (bbox.crossesDateline()) {
             if (random().nextBoolean()) {
-              lon = GeoTestUtil.nextLongitudeAround(bbox.maxLon, -180);
+              lon = GeoTestUtil.nextLongitudeAround(-180, bbox.maxLon);
             } else {
               lon = GeoTestUtil.nextLongitudeAround(0, bbox.minLon);
             }
