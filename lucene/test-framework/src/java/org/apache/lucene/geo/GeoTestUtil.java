@@ -17,6 +17,8 @@
 package org.apache.lucene.geo;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.lucene.util.NumericUtils;
@@ -441,27 +443,90 @@ public class GeoTestUtil {
   }
 
   /** Returns svg of polygon for debugging. */
-  public static String toSVG(Polygon... gons) {
-    Rectangle box = Rectangle.fromPolygon(gons);
-    double xpadding = (box.maxLon - box.minLon) / 64;
-    double ypadding = (box.maxLat - box.minLat) / 64;
+  public static String toSVG(Object ...objects) {
+    List<Object> flattened = new ArrayList<>();
+    for (Object o : objects) {
+      if (o instanceof Polygon[]) {
+        flattened.addAll(Arrays.asList((Polygon[]) o));
+      } else {
+        flattened.add(o);
+      }
+    }
+    // first compute bounding area of all the objects
+    double minLat = Double.POSITIVE_INFINITY;
+    double maxLat = Double.NEGATIVE_INFINITY;
+    double minLon = Double.POSITIVE_INFINITY;
+    double maxLon = Double.NEGATIVE_INFINITY;
+    for (Object o : flattened) {
+      final Rectangle r;
+      if (o instanceof Polygon) {
+        r = Rectangle.fromPolygon(new Polygon[] { (Polygon) o });
+      } else if (o instanceof Rectangle) {
+        r = (Rectangle) o;
+      } else if (o instanceof double[]) {
+        double point[] = (double[]) o;
+        r = new Rectangle(point[0], point[0], point[1], point[1]);
+      } else {
+        throw new UnsupportedOperationException("Unsupported element: " + o.getClass());
+      }
+      minLat = Math.min(minLat, r.minLat);
+      maxLat = Math.max(maxLat, r.maxLat);
+      minLon = Math.min(minLon, r.minLon);
+      maxLon = Math.max(maxLon, r.maxLon);
+    }
+    
+    // add some additional padding so we can really see what happens on the edges too
+    double xpadding = (maxLon - minLon) / 64;
+    double ypadding = (maxLat - minLat) / 64;
+    // expand points to be this large
+    double pointX = xpadding * 0.1;
+    double pointY = ypadding * 0.1;
     StringBuilder sb = new StringBuilder();
     sb.append("<svg xmlns=\"http://www.w3.org/2000/svg\" height=\"640\" width=\"480\" viewBox=\"");
-    sb.append(box.minLon - xpadding)
+    sb.append(minLon - xpadding)
       .append(" ")
-      .append(90 - box.maxLat - ypadding)
+      .append(90 - maxLat - ypadding)
       .append(" ")
-      .append(box.maxLon - box.minLon + (2*xpadding))
+      .append(maxLon - minLon + (2*xpadding))
       .append(" ")
-      .append(box.maxLat - box.minLat + (2*ypadding));
+      .append(maxLat - minLat + (2*ypadding));
     sb.append("\">\n");
-    for (Polygon gon : gons) {
-      sb.append("<!-- Polygon points: \n");
-      sb.append(gon.toString());
+
+    // encode each object
+    for (Object o : flattened) {
+      // tostring
+      if (o instanceof double[]) {
+        double point[] = (double[]) o;
+        sb.append("<!-- point: \n");
+        sb.append(point[0] + "," + point[1]);
+      } else {
+        sb.append("<!-- " + o.getClass().getSimpleName() + ": \n");
+        sb.append(o.toString());
+      }
       sb.append("\n-->\n");
+      final Polygon gon;
+      final String color;
+      final String strokeColor;
+      if (o instanceof Rectangle) {
+        gon = boxPolygon((Rectangle) o);
+        color = "lightskyblue";
+        strokeColor = "black";
+      } else if (o instanceof double[]) {
+        double point[] = (double[]) o;
+        gon = boxPolygon(new Rectangle(Math.max(-90, point[0]-pointY), 
+                                      Math.min(90, point[0]+pointY), 
+                                      Math.max(-180, point[1]-pointX), 
+                                      Math.min(180, point[1]+pointX)));
+        color = strokeColor = "red";
+      } else {
+        gon = (Polygon) o;
+        color = "lawngreen";
+        strokeColor = "black";
+      }
+      // polygon
       double polyLats[] = gon.getPolyLats();
       double polyLons[] = gon.getPolyLons();
-      sb.append("<polygon points=\"");
+      sb.append("<polygon fill-opacity=\"0.5\" points=\"");
       for (int i = 0; i < polyLats.length; i++) {
         if (i > 0) {
           sb.append(" ");
@@ -470,7 +535,7 @@ public class GeoTestUtil {
         .append(",")
         .append(90 - polyLats[i]);
       }
-      sb.append("\" style=\"fill:lawngreen;stroke:black;stroke-width:0.3%\"/>\n");
+      sb.append("\" style=\"fill:" + color + ";stroke:" + strokeColor + ";stroke-width:0.3%\"/>\n");
       for (Polygon hole : gon.getHoles()) {
         double holeLats[] = hole.getPolyLats();
         double holeLons[] = hole.getPolyLons();

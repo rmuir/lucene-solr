@@ -26,6 +26,9 @@ import static org.apache.lucene.geo.GeoTestUtil.nextLongitude;
 import static org.apache.lucene.geo.GeoTestUtil.nextLongitudeAround;
 import static org.apache.lucene.geo.GeoTestUtil.nextPolygon;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class TestPolygon extends LuceneTestCase {
   
   /** null polyLats not allowed */
@@ -90,6 +93,27 @@ public class TestPolygon extends LuceneTestCase {
     assertEquals(Relation.CELL_CROSSES_QUERY, Polygon.relate(polygons, 49, 51, 49, 51)); // overlapping the mainland
     assertEquals(Relation.CELL_CROSSES_QUERY, Polygon.relate(polygons, 9, 11, 9, 11)); // overlapping the hole
     assertEquals(Relation.CELL_CROSSES_QUERY, Polygon.relate(polygons, 5, 6, 5, 6)); // overlapping the island
+  }
+  
+  /** acts like a random test triggering points at a poly */
+  public void testMe() throws Exception {
+    List<Object> objects = new ArrayList<>();
+    Polygon polygon = GeoTestUtil.nextPolygon();
+    objects.add(polygon);
+    double polyLats[] = polygon.getPolyLats();
+    double polyLons[] = polygon.getPolyLons();
+    for (int vertex = 0; vertex < polyLats.length; vertex++) {
+      for (int i = 0; i < 10; i++) {
+        double latitude = GeoTestUtil.nextLatitudeNear(polyLats[vertex]);
+        double longitude = GeoTestUtil.nextLongitudeNear(polyLons[vertex]);
+        // for this "demo" just include points in the bounding box. otherwise it always scales poly to be small
+        if (latitude >= polygon.minLat && latitude <= polygon.maxLat && 
+            longitude >= polygon.minLon && longitude <= polygon.maxLon) {
+          objects.add(new double[] { latitude, longitude });
+        }
+      }
+    }
+    //System.out.println(GeoTestUtil.toSVG(objects.toArray()));
   }
   
   public void testPacMan() throws Exception {
