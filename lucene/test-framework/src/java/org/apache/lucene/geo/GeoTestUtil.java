@@ -276,11 +276,18 @@ public class GeoTestUtil {
       point1 = nextPointNear(polygon);
       point2 = nextPointNear(polygon);
     } else {
-      // formed from one interesting point: then random within delta up to 5%
+      // formed from one interesting point: then random within delta up to 1%
       point1 = nextPointNear(polygon);
       point2 = new double[2];
-      point2[0] = nextLatitudeNear(point1[0], 0.05 * (polygon.maxLat - polygon.minLat));
-      point2[1] = nextLongitudeNear(point1[1], 0.05 * (polygon.maxLon - polygon.minLon));
+      // now figure out a good delta: we use a rough heuristic, up to the length of an edge
+      double polyLats[] = polygon.getPolyLats();
+      double polyLons[] = polygon.getPolyLons();
+      int vertex = random().nextInt(polyLats.length - 1);
+      double deltaX = polyLons[vertex+1] - polyLons[vertex];
+      double deltaY = polyLats[vertex+1] - polyLats[vertex];
+      double edgeLength = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      point2[0] = nextLatitudeNear(point1[0], edgeLength);
+      point2[1] = nextLongitudeNear(point1[1], edgeLength);
     }
     
     // form a box from the two points

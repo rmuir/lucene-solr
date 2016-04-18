@@ -93,28 +93,6 @@ public class TestPolygon extends LuceneTestCase {
     assertEquals(Relation.CELL_CROSSES_QUERY, Polygon.relate(polygons, 5, 6, 5, 6)); // overlapping the island
   }
   
-  /** acts like a random test triggering points at a poly */
-  public void testMe() throws Exception {
-    List<Object> objects = new ArrayList<>();
-    Polygon polygon = GeoTestUtil.nextPolygon();
-    objects.add(polygon);
-    for (int i = 0; i < 10000; i++) {
-      objects.add(GeoTestUtil.nextPointNear(polygon));
-    }
-    System.out.println(GeoTestUtil.toSVG(objects.toArray()));
-  }
-  
-  /** acts like a random test triggering boxes at a poly */
-  public void testMeBox() throws Exception {
-    List<Object> objects = new ArrayList<>();
-    Polygon polygon = GeoTestUtil.nextPolygon();
-    objects.add(polygon);
-    for (int i = 0; i < 1000; i++) {
-      objects.add(GeoTestUtil.nextBoxNear(polygon));
-    }
-    System.out.println(GeoTestUtil.toSVG(objects.toArray()));
-  }
-  
   public void testPacMan() throws Exception {
     // pacman
     double[] px = {0, 10, 10, 0, -8, -10, -8, 0, 10, 10, 0};
