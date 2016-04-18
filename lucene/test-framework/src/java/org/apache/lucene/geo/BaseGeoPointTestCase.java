@@ -101,7 +101,7 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
   }
   
   protected double nextLongitudeNear(double other) {
-    return org.apache.lucene.geo.GeoTestUtil.nextLongitudeNear(other);
+    return org.apache.lucene.geo.GeoTestUtil.nextLongitudeNear(other, 0.5D);
   }
   
   protected double nextLatitude() {
@@ -109,7 +109,7 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
   }
   
   protected double nextLatitudeNear(double other) {
-    return org.apache.lucene.geo.GeoTestUtil.nextLatitudeNear(other);
+    return org.apache.lucene.geo.GeoTestUtil.nextLatitudeNear(other, 0.5D);
   }
   
   protected Rectangle nextBox() {

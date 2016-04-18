@@ -103,43 +103,45 @@ public class GeoTestUtil {
   }
 
   /** returns next pseudorandom latitude, kinda close to {@code otherLatitude} */
-  public static double nextLatitudeNear(double otherLatitude) {
+  public static double nextLatitudeNear(double otherLatitude, double delta) {
+    delta = Math.abs(delta);
     GeoUtils.checkLatitude(otherLatitude);
-    int surpriseMe = random().nextInt(11);
-    if (surpriseMe == 10) {
+    int surpriseMe = random().nextInt(97);
+    if (surpriseMe == 0) {
       // purely random
       return nextLatitude();
-    } else if (surpriseMe < 5) {
+    } else if (surpriseMe < 49) {
       // upper half of region (the exact point or 1 ulp difference is still likely)
-      return nextDoubleInternal(otherLatitude, Math.min(90, otherLatitude + 0.5));
+      return nextDoubleInternal(otherLatitude, Math.min(90, otherLatitude + delta));
     } else {
       // lower half of region (the exact point or 1 ulp difference is still likely)
-      return nextDoubleInternal(Math.max(-90, otherLatitude - 0.5), otherLatitude);
+      return nextDoubleInternal(Math.max(-90, otherLatitude - delta), otherLatitude);
     }
   }
 
   /** returns next pseudorandom longitude, kinda close to {@code otherLongitude} */
-  public static double nextLongitudeNear(double otherLongitude) {
+  public static double nextLongitudeNear(double otherLongitude, double delta) {
+    delta = Math.abs(delta);
     GeoUtils.checkLongitude(otherLongitude);
-    int surpriseMe = random().nextInt(11);
-    if (surpriseMe == 10) {
+    int surpriseMe = random().nextInt(97);
+    if (surpriseMe == 0) {
       // purely random
       return nextLongitude();
-    } else if (surpriseMe < 5) {
+    } else if (surpriseMe < 49) {
       // upper half of region (the exact point or 1 ulp difference is still likely)
-      return nextDoubleInternal(otherLongitude, Math.min(180, otherLongitude + 0.5));
+      return nextDoubleInternal(otherLongitude, Math.min(180, otherLongitude + delta));
     } else {
       // lower half of region (the exact point or 1 ulp difference is still likely)
-      return nextDoubleInternal(Math.max(-180, otherLongitude - 0.5), otherLongitude);
+      return nextDoubleInternal(Math.max(-180, otherLongitude - delta), otherLongitude);
     }
   }
 
   /**
    * returns next pseudorandom latitude, kinda close to {@code minLatitude/maxLatitude}
    * <b>NOTE:</b>minLatitude/maxLatitude are merely guidelines. the returned value is sometimes
-   * outside of that range! this is to facilitate edge testing.
+   * outside of that range! this is to facilitate edge testing of lines
    */
-  public static double nextLatitudeAround(double minLatitude, double maxLatitude) {
+  private static double nextLatitudeBetween(double minLatitude, double maxLatitude) {
     assert maxLatitude >= minLatitude;
     GeoUtils.checkLatitude(minLatitude);
     GeoUtils.checkLatitude(maxLatitude);
@@ -158,9 +160,9 @@ public class GeoTestUtil {
   /**
    * returns next pseudorandom longitude, kinda close to {@code minLongitude/maxLongitude}
    * <b>NOTE:</b>minLongitude/maxLongitude are merely guidelines. the returned value is sometimes
-   * outside of that range! this is to facilitate edge testing.
+   * outside of that range! this is to facilitate edge testing of lines
    */
-  public static double nextLongitudeAround(double minLongitude, double maxLongitude) {
+  private static double nextLongitudeBetween(double minLongitude, double maxLongitude) {
     assert maxLongitude >= minLongitude;
     GeoUtils.checkLongitude(minLongitude);
     GeoUtils.checkLongitude(maxLongitude);
@@ -173,6 +175,86 @@ public class GeoTestUtil {
       double lower = Math.max(-180, minLongitude - difference);
       double upper = Math.min(180, maxLongitude + difference);
       return nextDoubleInternal(lower, upper);
+    }
+  }
+  
+  /** Returns the next point around a line (more or less) */
+  private static double[] nextPointAroundLine(double lat1, double lon1, double lat2, double lon2) {
+    double x1 = lon1;
+    double x2 = lon2;
+    double y1 = lat1;
+    double y2 = lat2;
+    double minX = Math.min(x1, x2);
+    double maxX = Math.max(x1, x2);
+    double minY = Math.min(y1, y2);
+    double maxY = Math.max(y1, y2);
+    if (minX == maxX) {
+      return new double[] { nextLatitudeBetween(minY, maxY), nextLongitudeNear(minX, 0.01 * (maxY - minY)) };
+    } else if (minY == maxY) {
+      return new double[] { nextLatitudeNear(minY, 0.01 * (maxX - minX)), nextLongitudeBetween(minX, maxX) };
+    } else {
+      double x = nextLongitudeBetween(minX, maxX);
+      double y = (y1 - y2) / (x1 - x2) * (x-x1) + y1;
+      double delta = (maxY - minY) * 0.01;
+      // our formula may put the targeted Y out of bounds
+      y = Math.min(90, y);
+      y = Math.max(-90, y);
+      return new double[] { nextLatitudeNear(y, delta), x };
+    }
+  }
+  
+  /** Returns next point (lat/lon) for testing near a Box. It may cross the dateline */
+  public static double[] nextPointNear(Rectangle rectangle) {
+    if (rectangle.crossesDateline()) {
+      // pick a "side" of the two boxes we really are
+      if (random().nextBoolean()) {
+        return nextPointNear(new Rectangle(rectangle.minLat, rectangle.maxLat, -180, rectangle.maxLon));
+      } else {
+        return nextPointNear(new Rectangle(rectangle.minLat, rectangle.maxLat, rectangle.minLon, 180));
+      }
+    } else {
+      return nextPointNear(boxPolygon(rectangle));
+    }
+  }
+
+  /** Returns next point (lat/lon) for testing near a Polygon */
+  public static double[] nextPointNear(Polygon polygon) {
+    double polyLats[] = polygon.getPolyLats();
+    double polyLons[] = polygon.getPolyLons();
+    Polygon holes[] = polygon.getHoles();
+
+    // if there are any holes, target them aggressively
+    if (holes.length > 0 && random().nextInt(3) == 0) {
+      return nextPointNear(holes[random().nextInt(holes.length)]);
+    }
+
+    int surpriseMe = random().nextInt(97);
+    if (surpriseMe == 0) {
+      // purely random
+      return new double[] { nextLatitude(), nextLongitude() };
+    } else if (surpriseMe < 5) {
+      // purely random within bounding box
+      return new double[] { nextLatitudeBetween(polygon.minLat, polygon.maxLat), nextLongitudeBetween(polygon.minLon, polygon.maxLon) };
+    } else if (surpriseMe < 20) {
+      // target a vertex
+      int vertex = random().nextInt(polyLats.length - 1);
+      return new double[] { nextLatitudeNear(polyLats[vertex], polyLats[vertex+1] - polyLats[vertex]), 
+                            nextLongitudeNear(polyLons[vertex], polyLons[vertex+1] - polyLons[vertex]) };
+    } else if (surpriseMe < 30) {
+      // target points around the bounding box edges
+      Polygon container = boxPolygon(new Rectangle(polygon.minLat, polygon.maxLat, polygon.minLon, polygon.maxLon));
+      double containerLats[] = container.getPolyLats();
+      double containerLons[] = container.getPolyLons();
+      int startVertex = random().nextInt(containerLats.length - 1);
+      return nextPointAroundLine(containerLats[startVertex], containerLons[startVertex], 
+                                 containerLats[startVertex+1], containerLons[startVertex+1]);
+    } else {
+      // target points around diagonals between vertices
+      int startVertex = random().nextInt(polyLats.length - 1);
+      // but favor edges heavily
+      int endVertex = random().nextBoolean() ? startVertex + 1 : random().nextInt(polyLats.length - 1);
+      return nextPointAroundLine(polyLats[startVertex], polyLons[startVertex], 
+                                 polyLats[endVertex],   polyLons[endVertex]);
     }
   }
 
@@ -190,16 +272,16 @@ public class GeoTestUtil {
   public static Rectangle nextBoxNear(double otherLatitude, double otherLongitude) {
     GeoUtils.checkLongitude(otherLongitude);
     GeoUtils.checkLongitude(otherLongitude);
-    return nextBoxInternal(nextLatitudeNear(otherLatitude), nextLatitudeNear(otherLatitude),
-                           nextLongitudeNear(otherLongitude), nextLongitudeNear(otherLongitude), true);
+    return nextBoxInternal(nextLatitudeNear(otherLatitude, 0.5D), nextLatitudeNear(otherLatitude, 0.5D),
+                           nextLongitudeNear(otherLongitude, 0.5D), nextLongitudeNear(otherLongitude, 0.5D), true);
   }
   
   /** returns next pseudorandom box, will not cross the 180th meridian, kinda close to {@code otherLatitude} and {@code otherLongitude} */
   public static Rectangle nextSimpleBoxNear(double otherLatitude, double otherLongitude) {
     GeoUtils.checkLongitude(otherLongitude);
     GeoUtils.checkLongitude(otherLongitude);
-    return nextBoxInternal(nextLatitudeNear(otherLatitude), nextLatitudeNear(otherLatitude),
-                           nextLongitudeNear(otherLongitude), nextLongitudeNear(otherLongitude), false);
+    return nextBoxInternal(nextLatitudeNear(otherLatitude, 0.5D), nextLatitudeNear(otherLatitude, 0.5D),
+                           nextLongitudeNear(otherLongitude, 0.5D), nextLongitudeNear(otherLongitude, 0.5D), false);
   }
 
   /** Makes an n-gon, centered at the provided lat/lon, and each vertex approximately
@@ -308,8 +390,8 @@ public class GeoTestUtil {
       return surpriseMePolygon(otherLatitude, otherLongitude);
     }
 
-    Rectangle box = nextBoxInternal(nextLatitudeNear(otherLatitude), nextLatitudeNear(otherLatitude),
-                                  nextLongitudeNear(otherLongitude), nextLongitudeNear(otherLongitude), false);
+    Rectangle box = nextBoxInternal(nextLatitudeNear(otherLatitude, 0.5D), nextLatitudeNear(otherLatitude, 0.5D),
+                                  nextLongitudeNear(otherLongitude, 0.5D), nextLongitudeNear(otherLongitude, 0.5D), false);
     if (random().nextBoolean()) {
       // box
       return boxPolygon(box);
@@ -380,8 +462,8 @@ public class GeoTestUtil {
       } else {
         GeoUtils.checkLatitude(otherLatitude);
         GeoUtils.checkLongitude(otherLongitude);
-        centerLat = nextLatitudeNear(otherLatitude);
-        centerLon = nextLongitudeNear(otherLongitude);
+        centerLat = nextLatitudeNear(otherLatitude, 0.5D);
+        centerLon = nextLongitudeNear(otherLongitude, 0.5D);
       }
 
       double radius = 0.1 + 20 * random().nextDouble();
