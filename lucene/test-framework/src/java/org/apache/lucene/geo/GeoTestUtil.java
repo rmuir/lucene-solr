@@ -218,6 +218,7 @@ public class GeoTestUtil {
   }
 
   /** Returns next point (lat/lon) for testing near a Polygon */
+  // see http://www-ma2.upc.es/geoc/Schirra-pointPolygon.pdf for more info on some of these strategies
   public static double[] nextPointNear(Polygon polygon) {
     double polyLats[] = polygon.getPolyLats();
     double polyLons[] = polygon.getPolyLons();
@@ -257,31 +258,42 @@ public class GeoTestUtil {
                                  polyLats[endVertex],   polyLons[endVertex]);
     }
   }
+  
+  /** Returns next box for testing near a Polygon */
+  public static Rectangle nextBoxNear(Polygon polygon) {
+    final double point1[];
+    final double point2[];
+    
+    // if there are any holes, target them aggressively
+    Polygon holes[] = polygon.getHoles();
+    if (holes.length > 0 && random().nextInt(3) == 0) {
+      return nextBoxNear(holes[random().nextInt(holes.length)]);
+    }
+    
+    int surpriseMe = random().nextInt(97);
+    if (surpriseMe == 0) {
+      // formed from two interesting points
+      point1 = nextPointNear(polygon);
+      point2 = nextPointNear(polygon);
+    } else {
+      // formed from one interesting point: then random within delta up to 5%
+      point1 = nextPointNear(polygon);
+      point2 = new double[2];
+      point2[0] = nextLatitudeNear(point1[0], 0.05 * (polygon.maxLat - polygon.minLat));
+      point2[1] = nextLongitudeNear(point1[1], 0.05 * (polygon.maxLon - polygon.minLon));
+    }
+    
+    // form a box from the two points
+    double minLat = Math.min(point1[0], point2[0]);
+    double maxLat = Math.max(point1[0], point2[0]);
+    double minLon = Math.min(point1[1], point2[1]);
+    double maxLon = Math.max(point1[1], point2[1]);
+    return new Rectangle(minLat, maxLat, minLon, maxLon);
+  }
 
   /** returns next pseudorandom box: can cross the 180th meridian */
   public static Rectangle nextBox() {
     return nextBoxInternal(nextLatitude(), nextLatitude(), nextLongitude(), nextLongitude(), true);
-  }
-  
-  /** returns next pseudorandom box: will not cross the 180th meridian */
-  public static Rectangle nextSimpleBox() {
-    return nextBoxInternal(nextLatitude(), nextLatitude(), nextLongitude(), nextLongitude(), false);
-  }
-
-  /** returns next pseudorandom box, can cross the 180th meridian, kinda close to {@code otherLatitude} and {@code otherLongitude} */
-  public static Rectangle nextBoxNear(double otherLatitude, double otherLongitude) {
-    GeoUtils.checkLongitude(otherLongitude);
-    GeoUtils.checkLongitude(otherLongitude);
-    return nextBoxInternal(nextLatitudeNear(otherLatitude, 0.5D), nextLatitudeNear(otherLatitude, 0.5D),
-                           nextLongitudeNear(otherLongitude, 0.5D), nextLongitudeNear(otherLongitude, 0.5D), true);
-  }
-  
-  /** returns next pseudorandom box, will not cross the 180th meridian, kinda close to {@code otherLatitude} and {@code otherLongitude} */
-  public static Rectangle nextSimpleBoxNear(double otherLatitude, double otherLongitude) {
-    GeoUtils.checkLongitude(otherLongitude);
-    GeoUtils.checkLongitude(otherLongitude);
-    return nextBoxInternal(nextLatitudeNear(otherLatitude, 0.5D), nextLatitudeNear(otherLatitude, 0.5D),
-                           nextLongitudeNear(otherLongitude, 0.5D), nextLongitudeNear(otherLongitude, 0.5D), false);
   }
 
   /** Makes an n-gon, centered at the provided lat/lon, and each vertex approximately
@@ -359,7 +371,7 @@ public class GeoTestUtil {
   /** returns next pseudorandom polygon */
   public static Polygon nextPolygon() {
     if (random().nextBoolean()) {
-      return surpriseMePolygon(null, null);
+      return surpriseMePolygon();
     } else if (random().nextInt(10) == 1) {
       // this poly is slow to create ... only do it 10% of the time:
       while (true) {
@@ -375,23 +387,6 @@ public class GeoTestUtil {
     }
 
     Rectangle box = nextBoxInternal(nextLatitude(), nextLatitude(), nextLongitude(), nextLongitude(), false);
-    if (random().nextBoolean()) {
-      // box
-      return boxPolygon(box);
-    } else {
-      // triangle
-      return trianglePolygon(box);
-    }
-  }
-
-  /** returns next pseudorandom polygon, kinda close to {@code otherLatitude} and {@code otherLongitude} */
-  public static Polygon nextPolygonNear(double otherLatitude, double otherLongitude) {
-    if (random().nextBoolean()) {
-      return surpriseMePolygon(otherLatitude, otherLongitude);
-    }
-
-    Rectangle box = nextBoxInternal(nextLatitudeNear(otherLatitude, 0.5D), nextLatitudeNear(otherLatitude, 0.5D),
-                                  nextLongitudeNear(otherLongitude, 0.5D), nextLongitudeNear(otherLongitude, 0.5D), false);
     if (random().nextBoolean()) {
       // box
       return boxPolygon(box);
@@ -449,23 +444,13 @@ public class GeoTestUtil {
     return new Polygon(polyLats, polyLons);
   }
 
-  private static Polygon surpriseMePolygon(Double otherLatitude, Double otherLongitude) {
+  private static Polygon surpriseMePolygon() {
     // repeat until we get a poly that doesn't cross dateline:
     newPoly:
     while (true) {
       //System.out.println("\nPOLY ITER");
-      final double centerLat;
-      final double centerLon;
-      if (otherLatitude == null) {
-        centerLat = nextLatitude();
-        centerLon = nextLongitude();
-      } else {
-        GeoUtils.checkLatitude(otherLatitude);
-        GeoUtils.checkLongitude(otherLongitude);
-        centerLat = nextLatitudeNear(otherLatitude, 0.5D);
-        centerLon = nextLongitudeNear(otherLongitude, 0.5D);
-      }
-
+      double centerLat = nextLatitude();
+      double centerLon = nextLongitude();
       double radius = 0.1 + 20 * random().nextDouble();
       double radiusDelta = random().nextDouble();
 

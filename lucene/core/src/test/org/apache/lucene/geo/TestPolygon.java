@@ -104,23 +104,13 @@ public class TestPolygon extends LuceneTestCase {
     System.out.println(GeoTestUtil.toSVG(objects.toArray()));
   }
   
-  /** acts like a random test triggering points at a poly */
-  public void testMeOld() throws Exception {
+  /** acts like a random test triggering boxes at a poly */
+  public void testMeBox() throws Exception {
     List<Object> objects = new ArrayList<>();
     Polygon polygon = GeoTestUtil.nextPolygon();
     objects.add(polygon);
-    double polyLats[] = polygon.getPolyLats();
-    double polyLons[] = polygon.getPolyLons();
-    for (int vertex = 0; vertex < polyLats.length; vertex++) {
-      for (int i = 0; i < 500; i++) {
-        double latitude = GeoTestUtil.nextLatitudeNear(polyLats[vertex], 0.5D);
-        double longitude = GeoTestUtil.nextLongitudeNear(polyLons[vertex], 0.5D);
-        objects.add(new double[] { latitude, longitude });
-      }
-      for (int i = 0; i < 1; i++) {
-        Rectangle box = GeoTestUtil.nextSimpleBoxNear(polyLats[vertex], polyLons[vertex]);
-          objects.add(box);
-      }
+    for (int i = 0; i < 1000; i++) {
+      objects.add(GeoTestUtil.nextBoxNear(polygon));
     }
     System.out.println(GeoTestUtil.toSVG(objects.toArray()));
   }
@@ -181,12 +171,22 @@ public class TestPolygon extends LuceneTestCase {
       Polygon polygon = nextPolygon();
       
       for (int j = 0; j < 100; j++) {
-        Rectangle rectangle = GeoTestUtil.nextSimpleBox();
+        Rectangle rectangle = GeoTestUtil.nextBoxNear(polygon);
         // allowed to conservatively return false
         if (polygon.relate(rectangle.minLat, rectangle.maxLat, rectangle.minLon, rectangle.maxLon) == Relation.CELL_INSIDE_QUERY) {
-          for (int k = 0; k < 1000; k++) {
+          for (int k = 0; k < 500; k++) {
             // this tests in our range but sometimes outside! so we have to double-check its really in other box
             double point[] = GeoTestUtil.nextPointNear(rectangle);
+            double latitude = point[0];
+            double longitude = point[1];
+            // check for sure its in our box
+            if (latitude >= rectangle.minLat && latitude <= rectangle.maxLat && longitude >= rectangle.minLon && longitude <= rectangle.maxLon) {
+              assertTrue(polygon.contains(latitude, longitude));
+            }
+          }
+          for (int k = 0; k < 100; k++) {
+            // this tests in our range but sometimes outside! so we have to double-check its really in other box
+            double point[] = GeoTestUtil.nextPointNear(polygon);
             double latitude = point[0];
             double longitude = point[1];
             // check for sure its in our box
@@ -205,24 +205,29 @@ public class TestPolygon extends LuceneTestCase {
   public void testContainsEdgeCases() throws Exception {
     for (int i = 0; i < 1000; i++) {
       Polygon polygon = nextPolygon();
-      
-      double polyLats[] = polygon.getPolyLats();
-      double polyLons[] = polygon.getPolyLons();
-      
-      for (int vertex = 0; vertex < polyLats.length; vertex++) {
-        for (int j = 0; j < 10; j++) {
-          Rectangle rectangle = GeoTestUtil.nextSimpleBoxNear(polyLats[vertex], polyLons[vertex]);
-          // allowed to conservatively return false
-          if (polygon.relate(rectangle.minLat, rectangle.maxLat, rectangle.minLon, rectangle.maxLon) == Relation.CELL_INSIDE_QUERY) {
-            for (int k = 0; k < 100; k++) {
-              // this tests in our range but sometimes outside! so we have to double-check its really in other box
-              double point[] = GeoTestUtil.nextPointNear(rectangle);
-              double latitude = point[0];
-              double longitude = point[1];
-              // check for sure its in our box
-              if (latitude >= rectangle.minLat && latitude <= rectangle.maxLat && longitude >= rectangle.minLon && longitude <= rectangle.maxLon) {
-                assertTrue(polygon.contains(latitude, longitude));
-              }
+
+      for (int j = 0; j < 10; j++) {
+        Rectangle rectangle = GeoTestUtil.nextBoxNear(polygon);
+        // allowed to conservatively return false
+        if (polygon.relate(rectangle.minLat, rectangle.maxLat, rectangle.minLon, rectangle.maxLon) == Relation.CELL_INSIDE_QUERY) {
+          for (int k = 0; k < 100; k++) {
+            // this tests in our range but sometimes outside! so we have to double-check its really in other box
+            double point[] = GeoTestUtil.nextPointNear(rectangle);
+            double latitude = point[0];
+            double longitude = point[1];
+            // check for sure its in our box
+            if (latitude >= rectangle.minLat && latitude <= rectangle.maxLat && longitude >= rectangle.minLon && longitude <= rectangle.maxLon) {
+              assertTrue(polygon.contains(latitude, longitude));
+            }
+          }
+          for (int k = 0; k < 20; k++) {
+            // this tests in our range but sometimes outside! so we have to double-check its really in other box
+            double point[] = GeoTestUtil.nextPointNear(polygon);
+            double latitude = point[0];
+            double longitude = point[1];
+            // check for sure its in our box
+            if (latitude >= rectangle.minLat && latitude <= rectangle.maxLat && longitude >= rectangle.minLon && longitude <= rectangle.maxLon) {
+              assertTrue(polygon.contains(latitude, longitude));
             }
           }
         }
@@ -236,11 +241,21 @@ public class TestPolygon extends LuceneTestCase {
       Polygon polygon = nextPolygon();
       
       for (int j = 0; j < 100; j++) {
-        Rectangle rectangle = GeoTestUtil.nextSimpleBox();
+        Rectangle rectangle = GeoTestUtil.nextBoxNear(polygon);
         // allowed to conservatively return true.
         if (polygon.relate(rectangle.minLat, rectangle.maxLat, rectangle.minLon, rectangle.maxLon) == Relation.CELL_OUTSIDE_QUERY) {
           for (int k = 0; k < 1000; k++) {
             double point[] = GeoTestUtil.nextPointNear(rectangle);
+            // this tests in our range but sometimes outside! so we have to double-check its really in other box
+            double latitude = point[0];
+            double longitude = point[1];
+            // check for sure its in our box
+            if (latitude >= rectangle.minLat && latitude <= rectangle.maxLat && longitude >= rectangle.minLon && longitude <= rectangle.maxLon) {
+              assertFalse(polygon.contains(latitude, longitude));
+            }
+          }
+          for (int k = 0; k < 100; k++) {
+            double point[] = GeoTestUtil.nextPointNear(polygon);
             // this tests in our range but sometimes outside! so we have to double-check its really in other box
             double latitude = point[0];
             double longitude = point[1];
@@ -261,23 +276,28 @@ public class TestPolygon extends LuceneTestCase {
     for (int i = 0; i < 100; i++) {
       Polygon polygon = nextPolygon();
 
-      double polyLats[] = polygon.getPolyLats();
-      double polyLons[] = polygon.getPolyLons();
-
-      for (int vertex = 0; vertex < polyLats.length; vertex++) {
-        for (int j = 0; j < 10; j++) {
-          Rectangle rectangle = GeoTestUtil.nextSimpleBoxNear(polyLats[vertex], polyLons[vertex]);
-          // allowed to conservatively return false.
-          if (polygon.relate(rectangle.minLat, rectangle.maxLat, rectangle.minLon, rectangle.maxLon) == Relation.CELL_OUTSIDE_QUERY) {
-            for (int k = 0; k < 100; k++) {
-              // this tests in our range but sometimes outside! so we have to double-check its really in other box
-              double point[] = GeoTestUtil.nextPointNear(rectangle);
-              double latitude = point[0];
-              double longitude = point[1];
-              // check for sure its in our box
-              if (latitude >= rectangle.minLat && latitude <= rectangle.maxLat && longitude >= rectangle.minLon && longitude <= rectangle.maxLon) {
-                assertFalse(polygon.contains(latitude, longitude));
-              }
+      for (int j = 0; j < 10; j++) {
+        Rectangle rectangle = GeoTestUtil.nextBoxNear(polygon);
+        // allowed to conservatively return false.
+        if (polygon.relate(rectangle.minLat, rectangle.maxLat, rectangle.minLon, rectangle.maxLon) == Relation.CELL_OUTSIDE_QUERY) {
+          for (int k = 0; k < 100; k++) {
+            // this tests in our range but sometimes outside! so we have to double-check its really in other box
+            double point[] = GeoTestUtil.nextPointNear(rectangle);
+            double latitude = point[0];
+            double longitude = point[1];
+            // check for sure its in our box
+            if (latitude >= rectangle.minLat && latitude <= rectangle.maxLat && longitude >= rectangle.minLon && longitude <= rectangle.maxLon) {
+              assertFalse(polygon.contains(latitude, longitude));
+            }
+          }
+          for (int k = 0; k < 50; k++) {
+            // this tests in our range but sometimes outside! so we have to double-check its really in other box
+            double point[] = GeoTestUtil.nextPointNear(polygon);
+            double latitude = point[0];
+            double longitude = point[1];
+            // check for sure its in our box
+            if (latitude >= rectangle.minLat && latitude <= rectangle.maxLat && longitude >= rectangle.minLon && longitude <= rectangle.maxLon) {
+              assertFalse(polygon.contains(latitude, longitude));
             }
           }
         }
