@@ -102,6 +102,14 @@ public abstract class BaseGeoPointTestCase extends LuceneTestCase {
     return org.apache.lucene.geo.GeoTestUtil.nextPolygon();
   }
   
+  protected double[] nextPointNear(Rectangle rectangle) {
+    return org.apache.lucene.geo.GeoTestUtil.nextPointNear(rectangle);
+  }
+  
+  protected double[] nextPointNear(Polygon polygon) {
+    return org.apache.lucene.geo.GeoTestUtil.nextPointNear(polygon);
+  }
+  
   /** Valid values that should not cause exception */
   public void testIndexExtremeValues() {
     Document document = new Document();

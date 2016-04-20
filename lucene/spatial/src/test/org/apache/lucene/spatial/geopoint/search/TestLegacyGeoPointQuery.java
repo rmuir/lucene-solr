@@ -101,4 +101,14 @@ public class TestLegacyGeoPointQuery extends BaseGeoPointTestCase {
   protected Polygon nextPolygon() {
     return GeoPointTestUtil.nextPolygon();
   }
+  
+  @Override
+  protected double[] nextPointNear(Rectangle box) {
+    return new double[] { nextLatitude(), nextLongitude() };
+  }
+  
+  @Override
+  protected double[] nextPointNear(Polygon polygon) {
+    return new double[] { nextLatitude(), nextLongitude() };
+  }
 }
