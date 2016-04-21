@@ -30,6 +30,7 @@ import org.apache.lucene.index.PointValues.Relation;
 //
 // See "reliability and numerical stability" of www-ma2.upc.es/geoc/Schirra-pointPolygon.pdf. note that
 // we continue to only remain consistent with ourselves. 
+// TODO: clean this up, call it Polygon2D, and remove all the 2D methods from Polygon?
 final class LatLonTree {
   private final LatLonTree[] holes;
 
