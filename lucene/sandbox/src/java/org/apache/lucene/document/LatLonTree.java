@@ -216,29 +216,6 @@ final class LatLonTree {
     }
     return newNode;
   }
-
-  /** Helper for multipolygon logic: returns true if any of the supplied polygons contain the point */
-  static boolean contains(LatLonTree[] polygons, double latitude, double longitude) {
-    for (LatLonTree polygon : polygons) {
-      if (polygon.contains(latitude, longitude)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /** Returns the multipolygon relation for the rectangle */
-  static Relation relate(LatLonTree[] polygons, double minLat, double maxLat, double minLon, double maxLon) {
-    for (LatLonTree polygon : polygons) {
-      Relation relation = polygon.relate(minLat, maxLat, minLon, maxLon);
-      if (relation != Relation.CELL_OUTSIDE_QUERY) {
-        // note: we optimize for non-overlapping multipolygons. so if we cross one,
-        // we won't keep iterating to try to find a contains.
-        return relation;
-      }
-    }
-    return Relation.CELL_OUTSIDE_QUERY;
-  }
   
   /** Builds a tree from multipolygon */
   static LatLonTree build(Polygon... polygons) {
