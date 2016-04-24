@@ -34,6 +34,7 @@ import org.apache.lucene.index.PointValues.Relation;
 // we just organize the edges to do the same computations on the same subset of edges more efficiently. 
 // TODO: clean this up, call it Polygon2D, and remove all the 2D methods from Polygon?
 final class LatLonTree {
+  // tree of holes, or null
   private final LatLonTree holes;
 
   /** minimum latitude of this polygon's bounding box area */
@@ -47,6 +48,7 @@ final class LatLonTree {
   
   // maximum latitude of this component or any of its children
   double max;
+  // child components
   LatLonTree left;
   LatLonTree right;
   
@@ -109,7 +111,7 @@ final class LatLonTree {
     return false;
   }
   
-  /** Returns relation to the provided rectangle */
+  /** Returns relation to the provided rectangle for this component or any of its children */
   Relation relate(double minLat, double maxLat, double minLon, double maxLon) {
     if (minLat <= max) {
       Relation relation = componentRelate(minLat, maxLat, minLon, maxLon);
