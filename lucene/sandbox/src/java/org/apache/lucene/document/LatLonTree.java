@@ -175,22 +175,22 @@ final class LatLonTree {
   // returns 0, 4, or something in between
   private int numberOfCorners(double minLat, double maxLat, double minLon, double maxLon) {
     int containsCount = 0;
-    if (contains(minLat, minLon)) {
+    if (componentContains(minLat, minLon)) {
       containsCount++;
     }
-    if (contains(minLat, maxLon)) {
+    if (componentContains(minLat, maxLon)) {
       containsCount++;
     }
     if (containsCount == 1) {
       return containsCount;
     }
-    if (contains(maxLat, maxLon)) {
+    if (componentContains(maxLat, maxLon)) {
       containsCount++;
     }
     if (containsCount == 2) {
       return containsCount;
     }
-    if (contains(maxLat, minLon)) {
+    if (componentContains(maxLat, minLon)) {
       containsCount++;
     }
     return containsCount;
