@@ -34,7 +34,7 @@ import org.apache.lucene.index.PointValues.Relation;
 // we just organize the edges to do the same computations on the same subset of edges more efficiently. 
 // TODO: clean this up, call it Polygon2D, and remove all the 2D methods from Polygon?
 final class LatLonTree {
-  private final LatLonTree[] holes;
+  private final LatLonTree holes;
 
   /** minimum latitude of this polygon's bounding box area */
   final double minLat;
@@ -45,6 +45,7 @@ final class LatLonTree {
   /** maximum longitude of this polygon's bounding box area */
   final double maxLon;
   
+  // maximum latitude of this component or any of its children
   double max;
   LatLonTree left;
   LatLonTree right;
@@ -52,10 +53,8 @@ final class LatLonTree {
   /** root node of our tree */
   final Edge tree;
 
-  // TODO: "pack" all the gons and holes into one tree with separator.
-  // the algorithms support this, but we have to be careful.
-  LatLonTree(Polygon polygon, LatLonTree... holes) {
-    this.holes = holes.clone();
+  LatLonTree(Polygon polygon, LatLonTree holes) {
+    this.holes = holes;
     this.minLat = polygon.minLat;
     this.maxLat = polygon.maxLat;
     this.minLon = polygon.minLon;
@@ -101,10 +100,8 @@ final class LatLonTree {
     }
     
     if (tree.contains(latitude, longitude)) {
-      for (LatLonTree hole : holes) {
-        if (hole.contains(latitude, longitude)) {
-          return false;
-        }
+      if (holes != null && holes.contains(latitude, longitude)) {
+        return false;
       }
       return true;
     }
@@ -112,6 +109,7 @@ final class LatLonTree {
     return false;
   }
   
+  /** Returns relation to the provided rectangle */
   Relation relate(double minLat, double maxLat, double minLon, double maxLon) {
     if (minLat <= max) {
       Relation relation = componentRelate(minLat, maxLat, minLon, maxLon);
@@ -145,8 +143,8 @@ final class LatLonTree {
       return Relation.CELL_CROSSES_QUERY;
     }
     // check any holes
-    for (LatLonTree hole : holes) {
-      Relation holeRelation = hole.relate(minLat, maxLat, minLon, maxLon);
+    if (holes != null) {
+      Relation holeRelation = holes.relate(minLat, maxLat, minLon, maxLon);
       if (holeRelation == Relation.CELL_CROSSES_QUERY) {
         return Relation.CELL_CROSSES_QUERY;
       } else if (holeRelation == Relation.CELL_INSIDE_QUERY) {
@@ -196,7 +194,7 @@ final class LatLonTree {
     return containsCount;
   }
   
-  /** Creates tree from sorted edges (with range low and high inclusive) */
+  /** Creates tree from sorted components (with range low and high inclusive) */
   private static LatLonTree createTree(LatLonTree components[], int low, int high) {
     if (low > high) {
       return null;
@@ -246,9 +244,9 @@ final class LatLonTree {
     for (int i = 0; i < components.length; i++) {
       Polygon gon = polygons[i];
       Polygon gonHoles[] = gon.getHoles();
-      LatLonTree holes[] = new LatLonTree[gonHoles.length];
-      for (int j = 0; j < holes.length; j++) {
-        holes[j] = new LatLonTree(gonHoles[j]);
+      LatLonTree holes = null;
+      if (gonHoles.length > 0) {
+        holes = build(gonHoles);
       }
       components[i] = new LatLonTree(gon, holes);
     }
