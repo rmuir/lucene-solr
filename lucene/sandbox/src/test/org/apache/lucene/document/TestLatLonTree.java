@@ -29,7 +29,7 @@ public class TestLatLonTree extends LuceneTestCase {
   public void testContainsRandom() {
     for (int i = 0; i < 1000; i++) {
       Polygon polygon = GeoTestUtil.nextPolygon();
-      LatLonTree tree = new LatLonTree(polygon);
+      LatLonTree tree = LatLonTree.build(polygon);
       for (int j = 0; j < 1000; j++) {
         double point[] = GeoTestUtil.nextPointNear(polygon);
         boolean expected = polygon.contains(point[0], point[1]);
@@ -42,7 +42,7 @@ public class TestLatLonTree extends LuceneTestCase {
   public void testRelateRandom() {
     for (int i = 0; i < 1000; i++) {
       Polygon polygon = GeoTestUtil.nextPolygon();
-      LatLonTree tree = new LatLonTree(polygon);
+      LatLonTree tree = LatLonTree.build(polygon);
       for (int j = 0; j < 1000; j++) {
         Rectangle box = GeoTestUtil.nextBoxNear(polygon);
         Relation expected = polygon.relate(box.minLat, box.maxLat, box.minLon, box.maxLon);
