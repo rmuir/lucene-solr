@@ -92,11 +92,7 @@ final class LatLonPointInPolygonQuery extends Query {
     NumericUtils.intToSortableBytes(encodeLongitude(box.minLon), minLon, 0);
     NumericUtils.intToSortableBytes(encodeLongitude(box.maxLon), maxLon, 0);
 
-    final LatLonTree[] tree = LatLonTree.build(polygons);
-    final LatLonGrid grid = new LatLonGrid(encodeLatitude(box.minLat),
-                                           encodeLatitude(box.maxLat),
-                                           encodeLongitude(box.minLon),
-                                           encodeLongitude(box.maxLon), tree);
+    final LatLonTree tree = LatLonTree.build(polygons);
 
     return new ConstantScoreWeight(this) {
 
@@ -136,8 +132,8 @@ final class LatLonPointInPolygonQuery extends Query {
                                // outside of global bounding box range
                                return;
                              }
-                             if (grid.contains(NumericUtils.sortableBytesToInt(packedValue, 0), 
-                                               NumericUtils.sortableBytesToInt(packedValue, Integer.BYTES))) {
+                             if (tree.contains(decodeLatitude(packedValue, 0), 
+                                               decodeLongitude(packedValue, Integer.BYTES))) {
                                result.add(docID);
                              }
                            }
@@ -157,7 +153,7 @@ final class LatLonPointInPolygonQuery extends Query {
                              double cellMaxLat = decodeLatitude(maxPackedValue, 0);
                              double cellMaxLon = decodeLongitude(maxPackedValue, Integer.BYTES);
 
-                             return LatLonTree.relate(tree, cellMinLat, cellMaxLat, cellMinLon, cellMaxLon);
+                             return tree.relate(cellMinLat, cellMaxLat, cellMinLon, cellMaxLon);
                            }
                          });
 
