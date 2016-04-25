@@ -24,11 +24,13 @@ import org.apache.lucene.index.PointValues.Relation;
 /**
  * 2D polygon implementation represented as a balanced interval tree of edges.
  * <p>
- * contains() and crosses() are still O(n), but for most practical polygons 
- * are much faster than brute force.
+ * Construction takes {@code O(n log n)} time for sorting and tree construction.
+ * {@link #contains contains()} and {@link #relate relate()} are {@code O(n)}, but for most 
+ * practical polygons are much faster than brute force.
  * <p>
  * Loosely based on the algorithm described in <a href="http://www-ma2.upc.es/geoc/Schirra-pointPolygon.pdf">
  * http://www-ma2.upc.es/geoc/Schirra-pointPolygon.pdf</a>.
+ * @lucene.internal
  */
 // Both Polygon.contains() and Polygon.crossesSlowly() loop all edges, and first check that the edge is within a range.
 // we just organize the edges to do the same computations on the same subset of edges more efficiently. 
@@ -110,7 +112,7 @@ public final class Polygon2D {
     return false;
   }
   
-  /** Returns relation to the provided rectangle for this component or any of its children */
+  /** Returns relation to the provided rectangle */
   public Relation relate(double minLat, double maxLat, double minLon, double maxLon) {
     if (minLat <= max) {
       Relation relation = componentRelate(minLat, maxLat, minLon, maxLon);
@@ -133,7 +135,7 @@ public final class Polygon2D {
     return Relation.CELL_OUTSIDE_QUERY;
   }
 
-  /** Returns relation to the provided rectangle */
+  /** Returns relation to the provided rectangle for this component */
   private Relation componentRelate(double minLat, double maxLat, double minLon, double maxLon) {
     // if the bounding boxes are disjoint then the shape does not cross
     if (maxLon < this.minLon || minLon > this.maxLon || maxLat < this.minLat || minLat > this.maxLat) {
@@ -216,7 +218,7 @@ public final class Polygon2D {
     return newNode;
   }
   
-  /** Builds a tree from multipolygon */
+  /** Builds a Polygon2D from multipolygon */
   public static Polygon2D create(Polygon... polygons) {
     Polygon2D components[] = new Polygon2D[polygons.length];
     for (int i = 0; i < components.length; i++) {
