@@ -35,9 +35,6 @@ import org.apache.lucene.index.PointValues.Relation;
 // Both Polygon.contains() and Polygon.crossesSlowly() loop all edges, and first check that the edge is within a range.
 // we just organize the edges to do the same computations on the same subset of edges more efficiently. 
 public final class Polygon2D {
-  // tree of holes, or null
-  private final Polygon2D holes;
-
   /** minimum latitude of this polygon's bounding box area */
   public final double minLat;
   /** maximum latitude of this polygon's bounding box area */
@@ -47,13 +44,17 @@ public final class Polygon2D {
   /** maximum longitude of this polygon's bounding box area */
   public final double maxLon;
   
-  // maximum latitude of this component or any of its children
+  /** maximum latitude of this component or any of its children */
   private double max;
-  // child components
+
+  // child components, or null
   private Polygon2D left;
   private Polygon2D right;
   
-  /** root node of our tree */
+  /** tree of holes, or null */
+  private final Polygon2D holes;
+  
+  /** root node of edge tree */
   private final Edge tree;
 
   private Polygon2D(Polygon polygon, Polygon2D holes) {
@@ -93,9 +94,7 @@ public final class Polygon2D {
     return false;
   }
   
-  /** 
-   * Returns true if the point is contained within this polygon component.
-   */
+  /** Returns true if the point is contained within this polygon component. */
   private boolean componentContains(double latitude, double longitude) {
     // check bounding box
     if (latitude < minLat || latitude > maxLat || longitude < minLon || longitude > maxLon) {
@@ -198,6 +197,7 @@ public final class Polygon2D {
   }
   
   /** Creates tree from sorted components (with range low and high inclusive) */
+  // TODO: can we do low-overhead balanced 2D tree for this instead?
   private static Polygon2D createTree(Polygon2D components[], int low, int high) {
     if (low > high) {
       return null;
