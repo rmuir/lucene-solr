@@ -129,15 +129,6 @@ final class LatLonPointInPolygonQuery extends Query {
 
                            @Override
                            public void visit(int docID, byte[] packedValue) {
-                             // we bounds check individual values, as subtrees may cross, but we are being sent the values anyway:
-                             // this reduces the amount of docvalues fetches (improves approximation)
-                             if (StringHelper.compare(Integer.BYTES, packedValue, 0, maxLat, 0) > 0 ||
-                                 StringHelper.compare(Integer.BYTES, packedValue, 0, minLat, 0) < 0 ||
-                                 StringHelper.compare(Integer.BYTES, packedValue, Integer.BYTES, maxLon, 0) > 0 ||
-                                 StringHelper.compare(Integer.BYTES, packedValue, Integer.BYTES, minLon, 0) < 0) {
-                               // outside of global bounding box range
-                               return;
-                             }
                              if (tree.contains(decodeLatitude(packedValue, 0), 
                                                decodeLongitude(packedValue, Integer.BYTES))) {
                                result.add(docID);
