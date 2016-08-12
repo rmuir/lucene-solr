@@ -17,6 +17,9 @@
 package org.apache.lucene.store;
 
 import java.io.IOException;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.SwitchPoint;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -69,6 +72,16 @@ final class ByteBufferGuard {
       // this should trigger a happens-before - so flushes all caches
       barrier.lazySet(0);
       Thread.yield();
+      // this should force a safepoint? we think?
+      SwitchPoint switchPoint = new SwitchPoint();
+      MethodHandle handle = switchPoint.guardWithTest(MethodHandles.constant(Boolean.class, Boolean.TRUE), 
+                                                      MethodHandles.constant(Boolean.class, Boolean.FALSE));
+      SwitchPoint.invalidateAll(new SwitchPoint[] { switchPoint });
+      try {
+        Boolean unused = (Boolean) handle.invokeExact();
+      } catch (Throwable e) {
+        throw new RuntimeException(e);
+      }
       for (ByteBuffer b : bufs) {
         cleaner.freeBuffer(resourceDescription, b);
       }
