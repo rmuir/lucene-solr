@@ -83,7 +83,7 @@ import org.apache.lucene.util.NumericUtils;
  *
  * <p>See {@link org.apache.lucene.legacy.LegacyNumericRangeQuery} for more details on the
  * <a
- * href="../search/LegacyNumericRangeQuery.html#precisionStepDesc"><code>precisionStep</code></a>
+ * href="LegacyNumericRangeQuery.html#precisionStepDesc"><code>precisionStep</code></a>
  * parameter as well as how numeric fields work under the hood.</p>
  *
  * @deprecated Please switch to {@link org.apache.lucene.index.PointValues} instead

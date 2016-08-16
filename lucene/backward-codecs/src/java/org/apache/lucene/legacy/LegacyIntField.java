@@ -92,7 +92,7 @@ import org.apache.lucene.index.IndexOptions;
  *
  * <p>For more information on the internals of numeric trie
  * indexing, including the <a
- * href="../search/LegacyNumericRangeQuery.html#precisionStepDesc"><code>precisionStep</code></a>
+ * href="LegacyNumericRangeQuery.html#precisionStepDesc"><code>precisionStep</code></a>
  * configuration, see {@link org.apache.lucene.legacy.LegacyNumericRangeQuery}. The format of
  * indexed values is described in {@link org.apache.lucene.legacy.LegacyNumericUtils}.
  *
