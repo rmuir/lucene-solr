@@ -21,8 +21,21 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.index.IndexOptions;
 
+/**
+ * Field extension with support for legacy numerics
+ * @deprecated Please switch to {@link org.apache.lucene.index.PointValues} instead
+ */
+@Deprecated
 public class LegacyField extends Field {
 
+  /**
+   * Expert: creates a field with no initial value.
+   * Intended only for custom LegacyField subclasses.
+   * @param name field name
+   * @param type field type
+   * @throws IllegalArgumentException if either the name or type
+   *         is null.
+   */
   public LegacyField(String name, LegacyFieldType type) {
     super(name, type);
   }

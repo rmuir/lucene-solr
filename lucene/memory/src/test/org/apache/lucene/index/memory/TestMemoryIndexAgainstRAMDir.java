@@ -72,7 +72,6 @@ import org.apache.lucene.index.SortedSetDocValues;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
-import org.apache.lucene.legacy.LegacyLongField;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.IndexSearcher;
@@ -457,9 +456,6 @@ public class TestMemoryIndexAgainstRAMDir extends BaseTokenStreamTestCase {
     Document doc = new Document();
     long randomLong = random().nextLong();
     doc.add(new NumericDocValuesField("numeric", randomLong));
-    if (random().nextBoolean()) {
-      doc.add(new LegacyLongField("numeric", randomLong, Field.Store.NO));
-    }
     int numValues = atLeast(5);
     for (int i = 0; i < numValues; i++) {
       randomLong = random().nextLong();
@@ -467,9 +463,6 @@ public class TestMemoryIndexAgainstRAMDir extends BaseTokenStreamTestCase {
       if (random().nextBoolean()) {
         // randomly duplicate field/value
         doc.add(new SortedNumericDocValuesField("sorted_numeric", randomLong));
-      }
-      if (random().nextBoolean()) {
-        doc.add(new LegacyLongField("numeric", randomLong, Field.Store.NO));
       }
     }
     BytesRef randomTerm = new BytesRef(randomTerm());
