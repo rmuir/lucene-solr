@@ -19,8 +19,7 @@ package org.apache.lucene.queryparser.flexible.standard.config;
 import java.text.NumberFormat;
 import java.util.Objects;
 
-import org.apache.lucene.document.FieldType;
-import org.apache.lucene.document.FieldType.LegacyNumericType;
+import org.apache.lucene.legacy.LegacyNumericType;
 
 /**
  * This class holds the configuration used to parse numeric queries and create
@@ -37,7 +36,7 @@ public class LegacyNumericConfig {
   
   private NumberFormat format;
   
-  private FieldType.LegacyNumericType type;
+  private LegacyNumericType type;
   
   /**
    * Constructs a {@link LegacyNumericConfig} object.
@@ -52,7 +51,7 @@ public class LegacyNumericConfig {
    * 
    * @see LegacyNumericConfig#setPrecisionStep(int)
    * @see LegacyNumericConfig#setNumberFormat(NumberFormat)
-   * @see #setType(org.apache.lucene.document.FieldType.LegacyNumericType)
+   * @see #setType(LegacyNumericType)
    */
   public LegacyNumericConfig(int precisionStep, NumberFormat format,
       LegacyNumericType type) {

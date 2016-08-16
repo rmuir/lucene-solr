@@ -16,8 +16,8 @@
  */
 package org.apache.lucene.queryparser.flexible.standard.builders;
 
-import org.apache.lucene.document.FieldType;
 import org.apache.lucene.legacy.LegacyNumericRangeQuery;
+import org.apache.lucene.legacy.LegacyNumericType;
 import org.apache.lucene.queryparser.flexible.core.QueryNodeException;
 import org.apache.lucene.queryparser.flexible.core.messages.QueryParserMessages;
 import org.apache.lucene.queryparser.flexible.core.nodes.QueryNode;
@@ -56,7 +56,7 @@ public class LegacyNumericRangeQueryNodeBuilder implements StandardQueryBuilder 
     Number upperNumber = upperNumericNode.getValue();
     
     LegacyNumericConfig numericConfig = numericRangeNode.getNumericConfig();
-    FieldType.LegacyNumericType numberType = numericConfig.getType();
+    LegacyNumericType numberType = numericConfig.getType();
     String field = StringUtils.toString(numericRangeNode.getField());
     boolean minInclusive = numericRangeNode.isLowerInclusive();
     boolean maxInclusive = numericRangeNode.isUpperInclusive();
