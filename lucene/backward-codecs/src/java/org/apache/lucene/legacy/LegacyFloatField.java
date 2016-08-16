@@ -16,10 +16,7 @@
  */
 package org.apache.lucene.legacy;
 
-
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.FieldType;
 import org.apache.lucene.document.FloatPoint;
 import org.apache.lucene.index.IndexOptions;
 
@@ -82,7 +79,7 @@ import org.apache.lucene.index.IndexOptions;
  * but may result in faster range search performance.  The
  * default value, 8, was selected for a reasonable tradeoff
  * of disk space consumption versus performance.  You can
- * create a custom {@link FieldType} and invoke the {@link
+ * create a custom {@link LegacyFieldType} and invoke the {@link
  * LegacyFieldType#setNumericPrecisionStep} method if you'd
  * like to change the value.  Note that you must also
  * specify a congruent value when creating {@link
@@ -114,7 +111,7 @@ import org.apache.lucene.index.IndexOptions;
  */
 
 @Deprecated
-public final class LegacyFloatField extends Field {
+public final class LegacyFloatField extends LegacyField {
   
   /** 
    * Type for a LegacyFloatField that is not stored:
@@ -159,7 +156,7 @@ public final class LegacyFloatField extends Field {
   }
   
   /** Expert: allows you to customize the {@link
-   *  FieldType}. 
+   *  LegacyFieldType}. 
    *  @param name field name
    *  @param value 32-bit float value
    *  @param type customized field type: must have {@link LegacyFieldType#numericType()}

@@ -18,8 +18,6 @@ package org.apache.lucene.legacy;
 
 
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.FieldType;
 import org.apache.lucene.document.LongPoint;
 import org.apache.lucene.index.IndexOptions;
 
@@ -93,7 +91,7 @@ import org.apache.lucene.index.IndexOptions;
  * but may result in faster range search performance.  The
  * default value, 16, was selected for a reasonable tradeoff
  * of disk space consumption versus performance.  You can
- * create a custom {@link FieldType} and invoke the {@link
+ * create a custom {@link LegacyFieldType} and invoke the {@link
  * LegacyFieldType#setNumericPrecisionStep} method if you'd
  * like to change the value.  Note that you must also
  * specify a congruent value when creating {@link
@@ -125,7 +123,7 @@ import org.apache.lucene.index.IndexOptions;
  */
 
 @Deprecated
-public final class LegacyLongField extends Field {
+public final class LegacyLongField extends LegacyField {
   
   /** 
    * Type for a LegacyLongField that is not stored:
@@ -168,7 +166,7 @@ public final class LegacyLongField extends Field {
   }
   
   /** Expert: allows you to customize the {@link
-   *  FieldType}. 
+   *  LegacyFieldType}. 
    *  @param name field name
    *  @param value 64-bit long value
    *  @param type customized field type: must have {@link LegacyFieldType#numericType()}
