@@ -22,7 +22,7 @@ import org.apache.lucene.index.DocValuesType;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexableFieldType;
 import org.apache.lucene.index.PointValues;
-import org.apache.lucene.util.LegacyNumericUtils;
+import org.apache.lucene.legacy.LegacyNumericUtils;
 
 /**
  * Describes the properties of a field.
@@ -314,7 +314,7 @@ public class FieldType implements IndexableFieldType  {
 
   /** 
    * LegacyNumericType: if non-null then the field's value will be indexed
-   * numerically so that {@link org.apache.lucene.search.LegacyNumericRangeQuery} can be used at
+   * numerically so that {@link org.apache.lucene.legacy.LegacyNumericRangeQuery} can be used at
    * search time. 
    * <p>
    * The default is <code>null</code> (no numeric type) 
@@ -351,7 +351,7 @@ public class FieldType implements IndexableFieldType  {
    * <p>
    * This has no effect if {@link #numericType()} returns null.
    * <p>
-   * The default is {@link org.apache.lucene.util.LegacyNumericUtils#PRECISION_STEP_DEFAULT}
+   * The default is {@link org.apache.lucene.legacy.LegacyNumericUtils#PRECISION_STEP_DEFAULT}
    * @see #setNumericPrecisionStep(int)
    *
    * @deprecated Please switch to {@link org.apache.lucene.index.PointValues} instead

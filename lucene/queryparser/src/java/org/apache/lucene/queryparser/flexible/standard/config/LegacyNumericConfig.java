@@ -24,9 +24,9 @@ import org.apache.lucene.document.FieldType.LegacyNumericType;
 
 /**
  * This class holds the configuration used to parse numeric queries and create
- * {@link org.apache.lucene.search.LegacyNumericRangeQuery}s.
+ * {@link org.apache.lucene.legacy.LegacyNumericRangeQuery}s.
  * 
- * @see org.apache.lucene.search.LegacyNumericRangeQuery
+ * @see org.apache.lucene.legacy.LegacyNumericRangeQuery
  * @see NumberFormat
  * @deprecated Index with Points instead and use {@link PointsConfig}
  */
@@ -67,7 +67,7 @@ public class LegacyNumericConfig {
    * 
    * @return the precision used to index the numeric values
    * 
-   * @see org.apache.lucene.search.LegacyNumericRangeQuery#getPrecisionStep()
+   * @see org.apache.lucene.legacy.LegacyNumericRangeQuery#getPrecisionStep()
    */
   public int getPrecisionStep() {
     return precisionStep;
@@ -79,7 +79,7 @@ public class LegacyNumericConfig {
    * @param precisionStep
    *          the precision used to index the numeric values
    * 
-   * @see org.apache.lucene.search.LegacyNumericRangeQuery#getPrecisionStep()
+   * @see org.apache.lucene.legacy.LegacyNumericRangeQuery#getPrecisionStep()
    */
   public void setPrecisionStep(int precisionStep) {
     this.precisionStep = precisionStep;

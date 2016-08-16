@@ -24,16 +24,16 @@ import java.util.Collections;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.BaseTokenStreamTestCase;
 import org.apache.lucene.analysis.CannedTokenStream;
-import org.apache.lucene.analysis.LegacyNumericTokenStream.LegacyNumericTermAttribute;
-import org.apache.lucene.analysis.LegacyNumericTokenStream;
 import org.apache.lucene.analysis.Token;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.document.LegacyIntField;
 import org.apache.lucene.document.StringField;
+import org.apache.lucene.legacy.LegacyIntField;
+import org.apache.lucene.legacy.LegacyNumericTokenStream;
+import org.apache.lucene.legacy.LegacyNumericUtils;
+import org.apache.lucene.legacy.LegacyNumericTokenStream.LegacyNumericTermAttribute;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.LegacyNumericUtils;
 
 /** test tokenstream reuse by DefaultIndexingChain */
 public class TestFieldReuse extends BaseTokenStreamTestCase {
