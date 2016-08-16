@@ -28,7 +28,6 @@ import java.util.Set;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.document.FieldType;
 import org.apache.lucene.document.IntPoint;
 import org.apache.lucene.document.NumericDocValuesField;
 import org.apache.lucene.document.StoredField;
@@ -41,6 +40,7 @@ import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.LeafReader;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.SortedSetDocValues;
+import org.apache.lucene.legacy.LegacyFieldType;
 import org.apache.lucene.legacy.LegacyIntField;
 import org.apache.lucene.legacy.LegacyLongField;
 import org.apache.lucene.legacy.LegacyNumericUtils;
@@ -224,7 +224,7 @@ public class TestUninvertingReader extends LuceneTestCase {
     final Directory dir = newDirectory();
     final IndexWriter iw = new IndexWriter(dir, newIndexWriterConfig(null));
     
-    final FieldType NO_TRIE_TYPE = new FieldType(LegacyIntField.TYPE_NOT_STORED);
+    final LegacyFieldType NO_TRIE_TYPE = new LegacyFieldType(LegacyIntField.TYPE_NOT_STORED);
     NO_TRIE_TYPE.setNumericPrecisionStep(Integer.MAX_VALUE);
 
     final Map<String,Type> UNINVERT_MAP = new LinkedHashMap<String,Type>();

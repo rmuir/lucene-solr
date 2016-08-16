@@ -32,13 +32,14 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import org.apache.lucene.document.FieldType;
 import org.apache.lucene.document.NumericDocValuesField;
 import org.apache.lucene.document.SortedSetDocValuesField;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.legacy.LegacyFieldType;
 import org.apache.lucene.legacy.LegacyIntField;
 import org.apache.lucene.legacy.LegacyNumericRangeQuery;
+import org.apache.lucene.legacy.LegacyNumericType;
 import org.apache.lucene.legacy.LegacyNumericUtils;
 import org.apache.lucene.queries.function.ValueSource;
 import org.apache.lucene.queries.function.valuesource.EnumFieldSource;
@@ -234,8 +235,8 @@ public class EnumField extends PrimitiveFieldType {
    * {@inheritDoc}
    */
   @Override
-  public FieldType.LegacyNumericType getNumericType() {
-    return FieldType.LegacyNumericType.INT;
+  public LegacyNumericType getNumericType() {
+    return LegacyNumericType.INT;
   }
 
   /**
@@ -387,7 +388,7 @@ public class EnumField extends PrimitiveFieldType {
       throw new SolrException(SolrException.ErrorCode.SERVER_ERROR, "Unknown value for enum field: " + value.toString());
 
     String intAsString =  intValue.toString();
-    final FieldType newType = new FieldType();
+    final LegacyFieldType newType = new LegacyFieldType();
 
     newType.setTokenized(field.isTokenized());
     newType.setStored(field.stored());
@@ -397,7 +398,7 @@ public class EnumField extends PrimitiveFieldType {
     newType.setStoreTermVectorOffsets(field.storeTermOffsets());
     newType.setStoreTermVectorPositions(field.storeTermPositions());
     newType.setStoreTermVectorPayloads(field.storeTermPayloads());
-    newType.setNumericType(FieldType.LegacyNumericType.INT);
+    newType.setNumericType(LegacyNumericType.INT);
     newType.setNumericPrecisionStep(DEFAULT_PRECISION_STEP);
 
     final org.apache.lucene.document.Field f;
