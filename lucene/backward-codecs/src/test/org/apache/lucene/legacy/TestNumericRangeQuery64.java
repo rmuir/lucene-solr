@@ -20,7 +20,6 @@ package org.apache.lucene.legacy;
 import org.apache.lucene.analysis.MockAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.RandomIndexWriter;
@@ -62,37 +61,37 @@ public class TestNumericRangeQuery64 extends LuceneTestCase {
         .setMaxBufferedDocs(TestUtil.nextInt(random(), 100, 1000))
         .setMergePolicy(newLogMergePolicy()));
 
-    final FieldType storedLong = new FieldType(LegacyLongField.TYPE_NOT_STORED);
+    final LegacyFieldType storedLong = new LegacyFieldType(LegacyLongField.TYPE_NOT_STORED);
     storedLong.setStored(true);
     storedLong.freeze();
 
-    final FieldType storedLong8 = new FieldType(storedLong);
+    final LegacyFieldType storedLong8 = new LegacyFieldType(storedLong);
     storedLong8.setNumericPrecisionStep(8);
 
-    final FieldType storedLong4 = new FieldType(storedLong);
+    final LegacyFieldType storedLong4 = new LegacyFieldType(storedLong);
     storedLong4.setNumericPrecisionStep(4);
 
-    final FieldType storedLong6 = new FieldType(storedLong);
+    final LegacyFieldType storedLong6 = new LegacyFieldType(storedLong);
     storedLong6.setNumericPrecisionStep(6);
 
-    final FieldType storedLong2 = new FieldType(storedLong);
+    final LegacyFieldType storedLong2 = new LegacyFieldType(storedLong);
     storedLong2.setNumericPrecisionStep(2);
 
-    final FieldType storedLongNone = new FieldType(storedLong);
+    final LegacyFieldType storedLongNone = new LegacyFieldType(storedLong);
     storedLongNone.setNumericPrecisionStep(Integer.MAX_VALUE);
 
-    final FieldType unstoredLong = LegacyLongField.TYPE_NOT_STORED;
+    final LegacyFieldType unstoredLong = LegacyLongField.TYPE_NOT_STORED;
 
-    final FieldType unstoredLong8 = new FieldType(unstoredLong);
+    final LegacyFieldType unstoredLong8 = new LegacyFieldType(unstoredLong);
     unstoredLong8.setNumericPrecisionStep(8);
 
-    final FieldType unstoredLong6 = new FieldType(unstoredLong);
+    final LegacyFieldType unstoredLong6 = new LegacyFieldType(unstoredLong);
     unstoredLong6.setNumericPrecisionStep(6);
 
-    final FieldType unstoredLong4 = new FieldType(unstoredLong);
+    final LegacyFieldType unstoredLong4 = new LegacyFieldType(unstoredLong);
     unstoredLong4.setNumericPrecisionStep(4);
 
-    final FieldType unstoredLong2 = new FieldType(unstoredLong);
+    final LegacyFieldType unstoredLong2 = new LegacyFieldType(unstoredLong);
     unstoredLong2.setNumericPrecisionStep(2);
 
     LegacyLongField

@@ -83,7 +83,7 @@ import org.apache.lucene.index.IndexOptions;
  * default value, 8, was selected for a reasonable tradeoff
  * of disk space consumption versus performance.  You can
  * create a custom {@link FieldType} and invoke the {@link
- * FieldType#setNumericPrecisionStep} method if you'd
+ * LegacyFieldType#setNumericPrecisionStep} method if you'd
  * like to change the value.  Note that you must also
  * specify a congruent value when creating {@link
  * org.apache.lucene.legacy.LegacyNumericRangeQuery}.
@@ -120,12 +120,12 @@ public final class LegacyFloatField extends Field {
    * Type for a LegacyFloatField that is not stored:
    * normalization factors, frequencies, and positions are omitted.
    */
-  public static final FieldType TYPE_NOT_STORED = new FieldType();
+  public static final LegacyFieldType TYPE_NOT_STORED = new LegacyFieldType();
   static {
     TYPE_NOT_STORED.setTokenized(true);
     TYPE_NOT_STORED.setOmitNorms(true);
     TYPE_NOT_STORED.setIndexOptions(IndexOptions.DOCS);
-    TYPE_NOT_STORED.setNumericType(FieldType.LegacyNumericType.FLOAT);
+    TYPE_NOT_STORED.setNumericType(LegacyNumericType.FLOAT);
     TYPE_NOT_STORED.setNumericPrecisionStep(LegacyNumericUtils.PRECISION_STEP_DEFAULT_32);
     TYPE_NOT_STORED.freeze();
   }
@@ -134,12 +134,12 @@ public final class LegacyFloatField extends Field {
    * Type for a stored LegacyFloatField:
    * normalization factors, frequencies, and positions are omitted.
    */
-  public static final FieldType TYPE_STORED = new FieldType();
+  public static final LegacyFieldType TYPE_STORED = new LegacyFieldType();
   static {
     TYPE_STORED.setTokenized(true);
     TYPE_STORED.setOmitNorms(true);
     TYPE_STORED.setIndexOptions(IndexOptions.DOCS);
-    TYPE_STORED.setNumericType(FieldType.LegacyNumericType.FLOAT);
+    TYPE_STORED.setNumericType(LegacyNumericType.FLOAT);
     TYPE_STORED.setNumericPrecisionStep(LegacyNumericUtils.PRECISION_STEP_DEFAULT_32);
     TYPE_STORED.setStored(true);
     TYPE_STORED.freeze();
@@ -162,14 +162,14 @@ public final class LegacyFloatField extends Field {
    *  FieldType}. 
    *  @param name field name
    *  @param value 32-bit float value
-   *  @param type customized field type: must have {@link FieldType#numericType()}
-   *         of {@link org.apache.lucene.document.FieldType.LegacyNumericType#FLOAT}.
+   *  @param type customized field type: must have {@link LegacyFieldType#numericType()}
+   *         of {@link LegacyNumericType#FLOAT}.
    *  @throws IllegalArgumentException if the field name or type is null, or
    *          if the field type does not have a FLOAT numericType()
    */
-  public LegacyFloatField(String name, float value, FieldType type) {
+  public LegacyFloatField(String name, float value, LegacyFieldType type) {
     super(name, type);
-    if (type.numericType() != FieldType.LegacyNumericType.FLOAT) {
+    if (type.numericType() != LegacyNumericType.FLOAT) {
       throw new IllegalArgumentException("type.numericType() must be FLOAT but got " + type.numericType());
     }
     fieldsData = Float.valueOf(value);

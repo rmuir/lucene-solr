@@ -22,8 +22,6 @@ import java.util.LinkedList;
 import java.util.Objects;
 
 import org.apache.lucene.document.DoublePoint;
-import org.apache.lucene.document.FieldType;
-import org.apache.lucene.document.FieldType.LegacyNumericType;
 import org.apache.lucene.document.FloatPoint;
 import org.apache.lucene.document.IntPoint;
 import org.apache.lucene.document.LongPoint;
@@ -202,7 +200,7 @@ public final class LegacyNumericRangeQuery<T extends Number> extends MultiTermQu
   public static LegacyNumericRangeQuery<Long> newLongRange(final String field, final int precisionStep,
     Long min, Long max, final boolean minInclusive, final boolean maxInclusive
   ) {
-    return new LegacyNumericRangeQuery<>(field, precisionStep, FieldType.LegacyNumericType.LONG, min, max, minInclusive, maxInclusive);
+    return new LegacyNumericRangeQuery<>(field, precisionStep, LegacyNumericType.LONG, min, max, minInclusive, maxInclusive);
   }
   
   /**
@@ -215,7 +213,7 @@ public final class LegacyNumericRangeQuery<T extends Number> extends MultiTermQu
   public static LegacyNumericRangeQuery<Long> newLongRange(final String field,
     Long min, Long max, final boolean minInclusive, final boolean maxInclusive
   ) {
-    return new LegacyNumericRangeQuery<>(field, LegacyNumericUtils.PRECISION_STEP_DEFAULT, FieldType.LegacyNumericType.LONG, min, max, minInclusive, maxInclusive);
+    return new LegacyNumericRangeQuery<>(field, LegacyNumericUtils.PRECISION_STEP_DEFAULT, LegacyNumericType.LONG, min, max, minInclusive, maxInclusive);
   }
   
   /**
@@ -228,7 +226,7 @@ public final class LegacyNumericRangeQuery<T extends Number> extends MultiTermQu
   public static LegacyNumericRangeQuery<Integer> newIntRange(final String field, final int precisionStep,
     Integer min, Integer max, final boolean minInclusive, final boolean maxInclusive
   ) {
-    return new LegacyNumericRangeQuery<>(field, precisionStep, FieldType.LegacyNumericType.INT, min, max, minInclusive, maxInclusive);
+    return new LegacyNumericRangeQuery<>(field, precisionStep, LegacyNumericType.INT, min, max, minInclusive, maxInclusive);
   }
   
   /**
@@ -241,7 +239,7 @@ public final class LegacyNumericRangeQuery<T extends Number> extends MultiTermQu
   public static LegacyNumericRangeQuery<Integer> newIntRange(final String field,
     Integer min, Integer max, final boolean minInclusive, final boolean maxInclusive
   ) {
-    return new LegacyNumericRangeQuery<>(field, LegacyNumericUtils.PRECISION_STEP_DEFAULT_32, FieldType.LegacyNumericType.INT, min, max, minInclusive, maxInclusive);
+    return new LegacyNumericRangeQuery<>(field, LegacyNumericUtils.PRECISION_STEP_DEFAULT_32, LegacyNumericType.INT, min, max, minInclusive, maxInclusive);
   }
   
   /**
@@ -256,7 +254,7 @@ public final class LegacyNumericRangeQuery<T extends Number> extends MultiTermQu
   public static LegacyNumericRangeQuery<Double> newDoubleRange(final String field, final int precisionStep,
     Double min, Double max, final boolean minInclusive, final boolean maxInclusive
   ) {
-    return new LegacyNumericRangeQuery<>(field, precisionStep, FieldType.LegacyNumericType.DOUBLE, min, max, minInclusive, maxInclusive);
+    return new LegacyNumericRangeQuery<>(field, precisionStep, LegacyNumericType.DOUBLE, min, max, minInclusive, maxInclusive);
   }
   
   /**
@@ -271,7 +269,7 @@ public final class LegacyNumericRangeQuery<T extends Number> extends MultiTermQu
   public static LegacyNumericRangeQuery<Double> newDoubleRange(final String field,
     Double min, Double max, final boolean minInclusive, final boolean maxInclusive
   ) {
-    return new LegacyNumericRangeQuery<>(field, LegacyNumericUtils.PRECISION_STEP_DEFAULT, FieldType.LegacyNumericType.DOUBLE, min, max, minInclusive, maxInclusive);
+    return new LegacyNumericRangeQuery<>(field, LegacyNumericUtils.PRECISION_STEP_DEFAULT, LegacyNumericType.DOUBLE, min, max, minInclusive, maxInclusive);
   }
   
   /**
@@ -286,7 +284,7 @@ public final class LegacyNumericRangeQuery<T extends Number> extends MultiTermQu
   public static LegacyNumericRangeQuery<Float> newFloatRange(final String field, final int precisionStep,
     Float min, Float max, final boolean minInclusive, final boolean maxInclusive
   ) {
-    return new LegacyNumericRangeQuery<>(field, precisionStep, FieldType.LegacyNumericType.FLOAT, min, max, minInclusive, maxInclusive);
+    return new LegacyNumericRangeQuery<>(field, precisionStep, LegacyNumericType.FLOAT, min, max, minInclusive, maxInclusive);
   }
   
   /**
@@ -301,7 +299,7 @@ public final class LegacyNumericRangeQuery<T extends Number> extends MultiTermQu
   public static LegacyNumericRangeQuery<Float> newFloatRange(final String field,
     Float min, Float max, final boolean minInclusive, final boolean maxInclusive
   ) {
-    return new LegacyNumericRangeQuery<>(field, LegacyNumericUtils.PRECISION_STEP_DEFAULT_32, FieldType.LegacyNumericType.FLOAT, min, max, minInclusive, maxInclusive);
+    return new LegacyNumericRangeQuery<>(field, LegacyNumericUtils.PRECISION_STEP_DEFAULT_32, LegacyNumericType.FLOAT, min, max, minInclusive, maxInclusive);
   }
 
   @Override @SuppressWarnings("unchecked")
@@ -372,7 +370,7 @@ public final class LegacyNumericRangeQuery<T extends Number> extends MultiTermQu
 
   // members (package private, to be also fast accessible by NumericRangeTermEnum)
   final int precisionStep;
-  final FieldType.LegacyNumericType dataType;
+  final LegacyNumericType dataType;
   final T min, max;
   final boolean minInclusive,maxInclusive;
 
@@ -409,10 +407,10 @@ public final class LegacyNumericRangeQuery<T extends Number> extends MultiTermQu
         case DOUBLE: {
           // lower
           long minBound;
-          if (dataType == FieldType.LegacyNumericType.LONG) {
+          if (dataType == LegacyNumericType.LONG) {
             minBound = (min == null) ? Long.MIN_VALUE : min.longValue();
           } else {
-            assert dataType == FieldType.LegacyNumericType.DOUBLE;
+            assert dataType == LegacyNumericType.DOUBLE;
             minBound = (min == null) ? LONG_NEGATIVE_INFINITY
               : NumericUtils.doubleToSortableLong(min.doubleValue());
           }
@@ -423,10 +421,10 @@ public final class LegacyNumericRangeQuery<T extends Number> extends MultiTermQu
           
           // upper
           long maxBound;
-          if (dataType == FieldType.LegacyNumericType.LONG) {
+          if (dataType == LegacyNumericType.LONG) {
             maxBound = (max == null) ? Long.MAX_VALUE : max.longValue();
           } else {
-            assert dataType == FieldType.LegacyNumericType.DOUBLE;
+            assert dataType == LegacyNumericType.DOUBLE;
             maxBound = (max == null) ? LONG_POSITIVE_INFINITY
               : NumericUtils.doubleToSortableLong(max.doubleValue());
           }
@@ -449,10 +447,10 @@ public final class LegacyNumericRangeQuery<T extends Number> extends MultiTermQu
         case FLOAT: {
           // lower
           int minBound;
-          if (dataType == FieldType.LegacyNumericType.INT) {
+          if (dataType == LegacyNumericType.INT) {
             minBound = (min == null) ? Integer.MIN_VALUE : min.intValue();
           } else {
-            assert dataType == FieldType.LegacyNumericType.FLOAT;
+            assert dataType == LegacyNumericType.FLOAT;
             minBound = (min == null) ? INT_NEGATIVE_INFINITY
               : NumericUtils.floatToSortableInt(min.floatValue());
           }
@@ -466,7 +464,7 @@ public final class LegacyNumericRangeQuery<T extends Number> extends MultiTermQu
           if (dataType == LegacyNumericType.INT) {
             maxBound = (max == null) ? Integer.MAX_VALUE : max.intValue();
           } else {
-            assert dataType == FieldType.LegacyNumericType.FLOAT;
+            assert dataType == LegacyNumericType.FLOAT;
             maxBound = (max == null) ? INT_POSITIVE_INFINITY
               : NumericUtils.floatToSortableInt(max.floatValue());
           }

@@ -84,7 +84,7 @@ import org.apache.lucene.index.IndexOptions;
  * default value, 16, was selected for a reasonable tradeoff
  * of disk space consumption versus performance.  You can
  * create a custom {@link FieldType} and invoke the {@link
- * FieldType#setNumericPrecisionStep} method if you'd
+ * LegacyFieldType#setNumericPrecisionStep} method if you'd
  * like to change the value.  Note that you must also
  * specify a congruent value when creating {@link
  * org.apache.lucene.legacy.LegacyNumericRangeQuery}.
@@ -121,12 +121,12 @@ public final class LegacyDoubleField extends Field {
    * Type for a LegacyDoubleField that is not stored:
    * normalization factors, frequencies, and positions are omitted.
    */
-  public static final FieldType TYPE_NOT_STORED = new FieldType();
+  public static final LegacyFieldType TYPE_NOT_STORED = new LegacyFieldType();
   static {
     TYPE_NOT_STORED.setTokenized(true);
     TYPE_NOT_STORED.setOmitNorms(true);
     TYPE_NOT_STORED.setIndexOptions(IndexOptions.DOCS);
-    TYPE_NOT_STORED.setNumericType(FieldType.LegacyNumericType.DOUBLE);
+    TYPE_NOT_STORED.setNumericType(LegacyNumericType.DOUBLE);
     TYPE_NOT_STORED.freeze();
   }
 
@@ -134,12 +134,12 @@ public final class LegacyDoubleField extends Field {
    * Type for a stored LegacyDoubleField:
    * normalization factors, frequencies, and positions are omitted.
    */
-  public static final FieldType TYPE_STORED = new FieldType();
+  public static final LegacyFieldType TYPE_STORED = new LegacyFieldType();
   static {
     TYPE_STORED.setTokenized(true);
     TYPE_STORED.setOmitNorms(true);
     TYPE_STORED.setIndexOptions(IndexOptions.DOCS);
-    TYPE_STORED.setNumericType(FieldType.LegacyNumericType.DOUBLE);
+    TYPE_STORED.setNumericType(LegacyNumericType.DOUBLE);
     TYPE_STORED.setStored(true);
     TYPE_STORED.freeze();
   }
@@ -161,14 +161,14 @@ public final class LegacyDoubleField extends Field {
    *  FieldType}. 
    *  @param name field name
    *  @param value 64-bit double value
-   *  @param type customized field type: must have {@link FieldType#numericType()}
-   *         of {@link org.apache.lucene.document.FieldType.LegacyNumericType#DOUBLE}.
+   *  @param type customized field type: must have {@link LegacyFieldType#numericType()}
+   *         of {@link LegacyNumericType#DOUBLE}.
    *  @throws IllegalArgumentException if the field name or type is null, or
    *          if the field type does not have a DOUBLE numericType()
    */
-  public LegacyDoubleField(String name, double value, FieldType type) {
+  public LegacyDoubleField(String name, double value, LegacyFieldType type) {
     super(name, type);
-    if (type.numericType() != FieldType.LegacyNumericType.DOUBLE) {
+    if (type.numericType() != LegacyNumericType.DOUBLE) {
       throw new IllegalArgumentException("type.numericType() must be DOUBLE but got " + type.numericType());
     }
     fieldsData = Double.valueOf(value);

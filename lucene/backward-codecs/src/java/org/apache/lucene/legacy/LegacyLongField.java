@@ -94,7 +94,7 @@ import org.apache.lucene.index.IndexOptions;
  * default value, 16, was selected for a reasonable tradeoff
  * of disk space consumption versus performance.  You can
  * create a custom {@link FieldType} and invoke the {@link
- * FieldType#setNumericPrecisionStep} method if you'd
+ * LegacyFieldType#setNumericPrecisionStep} method if you'd
  * like to change the value.  Note that you must also
  * specify a congruent value when creating {@link
  * org.apache.lucene.legacy.LegacyNumericRangeQuery}.
@@ -131,12 +131,12 @@ public final class LegacyLongField extends Field {
    * Type for a LegacyLongField that is not stored:
    * normalization factors, frequencies, and positions are omitted.
    */
-  public static final FieldType TYPE_NOT_STORED = new FieldType();
+  public static final LegacyFieldType TYPE_NOT_STORED = new LegacyFieldType();
   static {
     TYPE_NOT_STORED.setTokenized(true);
     TYPE_NOT_STORED.setOmitNorms(true);
     TYPE_NOT_STORED.setIndexOptions(IndexOptions.DOCS);
-    TYPE_NOT_STORED.setNumericType(FieldType.LegacyNumericType.LONG);
+    TYPE_NOT_STORED.setNumericType(LegacyNumericType.LONG);
     TYPE_NOT_STORED.freeze();
   }
 
@@ -144,12 +144,12 @@ public final class LegacyLongField extends Field {
    * Type for a stored LegacyLongField:
    * normalization factors, frequencies, and positions are omitted.
    */
-  public static final FieldType TYPE_STORED = new FieldType();
+  public static final LegacyFieldType TYPE_STORED = new LegacyFieldType();
   static {
     TYPE_STORED.setTokenized(true);
     TYPE_STORED.setOmitNorms(true);
     TYPE_STORED.setIndexOptions(IndexOptions.DOCS);
-    TYPE_STORED.setNumericType(FieldType.LegacyNumericType.LONG);
+    TYPE_STORED.setNumericType(LegacyNumericType.LONG);
     TYPE_STORED.setStored(true);
     TYPE_STORED.freeze();
   }
@@ -171,14 +171,14 @@ public final class LegacyLongField extends Field {
    *  FieldType}. 
    *  @param name field name
    *  @param value 64-bit long value
-   *  @param type customized field type: must have {@link FieldType#numericType()}
-   *         of {@link org.apache.lucene.document.FieldType.LegacyNumericType#LONG}.
+   *  @param type customized field type: must have {@link LegacyFieldType#numericType()}
+   *         of {@link LegacyNumericType#LONG}.
    *  @throws IllegalArgumentException if the field name or type is null, or
    *          if the field type does not have a LONG numericType()
    */
-  public LegacyLongField(String name, long value, FieldType type) {
+  public LegacyLongField(String name, long value, LegacyFieldType type) {
     super(name, type);
-    if (type.numericType() != FieldType.LegacyNumericType.LONG) {
+    if (type.numericType() != LegacyNumericType.LONG) {
       throw new IllegalArgumentException("type.numericType() must be LONG but got " + type.numericType());
     }
     fieldsData = Long.valueOf(value);

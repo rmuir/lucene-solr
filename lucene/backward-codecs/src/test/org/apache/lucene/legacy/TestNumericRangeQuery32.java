@@ -20,7 +20,6 @@ package org.apache.lucene.legacy;
 import org.apache.lucene.analysis.MockAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.RandomIndexWriter;
@@ -62,31 +61,31 @@ public class TestNumericRangeQuery32 extends LuceneTestCase {
         .setMaxBufferedDocs(TestUtil.nextInt(random(), 100, 1000))
         .setMergePolicy(newLogMergePolicy()));
     
-    final FieldType storedInt = new FieldType(LegacyIntField.TYPE_NOT_STORED);
+    final LegacyFieldType storedInt = new LegacyFieldType(LegacyIntField.TYPE_NOT_STORED);
     storedInt.setStored(true);
     storedInt.freeze();
 
-    final FieldType storedInt8 = new FieldType(storedInt);
+    final LegacyFieldType storedInt8 = new LegacyFieldType(storedInt);
     storedInt8.setNumericPrecisionStep(8);
 
-    final FieldType storedInt4 = new FieldType(storedInt);
+    final LegacyFieldType storedInt4 = new LegacyFieldType(storedInt);
     storedInt4.setNumericPrecisionStep(4);
 
-    final FieldType storedInt2 = new FieldType(storedInt);
+    final LegacyFieldType storedInt2 = new LegacyFieldType(storedInt);
     storedInt2.setNumericPrecisionStep(2);
 
-    final FieldType storedIntNone = new FieldType(storedInt);
+    final LegacyFieldType storedIntNone = new LegacyFieldType(storedInt);
     storedIntNone.setNumericPrecisionStep(Integer.MAX_VALUE);
 
-    final FieldType unstoredInt = LegacyIntField.TYPE_NOT_STORED;
+    final LegacyFieldType unstoredInt = LegacyIntField.TYPE_NOT_STORED;
 
-    final FieldType unstoredInt8 = new FieldType(unstoredInt);
+    final LegacyFieldType unstoredInt8 = new LegacyFieldType(unstoredInt);
     unstoredInt8.setNumericPrecisionStep(8);
 
-    final FieldType unstoredInt4 = new FieldType(unstoredInt);
+    final LegacyFieldType unstoredInt4 = new LegacyFieldType(unstoredInt);
     unstoredInt4.setNumericPrecisionStep(4);
 
-    final FieldType unstoredInt2 = new FieldType(unstoredInt);
+    final LegacyFieldType unstoredInt2 = new LegacyFieldType(unstoredInt);
     unstoredInt2.setNumericPrecisionStep(2);
 
     LegacyIntField
